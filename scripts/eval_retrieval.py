@@ -23,7 +23,7 @@ sys.path.insert(0, str(ROOT))
 from rag.embeddings import get_embedder  # noqa: E402
 from rag.store import INDEX_DIR, Store, build  # noqa: E402
 
-MODES = ("hybrid", "dense", "bm25")
+MODES = ("hybrid", "hybrid-no-routing", "dense", "bm25")  # hybrid = dense + BM25 + statistics routing
 
 
 def load_cases() -> list[dict]:

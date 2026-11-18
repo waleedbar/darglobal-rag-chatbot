@@ -74,7 +74,7 @@ class Store:
     def search(self, query: str, k: int = 6, pool: int = 30, mode: str = "hybrid") -> list[dict]:
         """Hybrid search. Returns chunks with `score` (cosine of best dense match) and `rrf`.
         At most 3 chunks per page, so one long page cannot crowd out other relevant sources.
-        `mode` = "dense" or "bm25" switches one retriever off (used by the ablation in scripts/eval_retrieval.py)."""
+        `mode` = "hybrid-no-routing", "dense" or "bm25" switches parts off (ablation in scripts/eval_retrieval.py)."""
         query = expand_query(query)
         qv = self.embedder.embed_query(query)
         sims, ids = self.index.search(qv, min(pool, len(self.chunks)))
@@ -84,7 +84,8 @@ class Store:
         top_bm = np.argsort(-bm)[:pool]
         bm_rank = {int(i): r for r, i in enumerate(top_bm) if bm[i] > 0}
         fused: dict[int, float] = {}
-        rankings = {"hybrid": (dense_rank, bm_rank), "dense": (dense_rank,), "bm25": (bm_rank,)}[mode]
+        rankings = {"hybrid": (dense_rank, bm_rank), "hybrid-no-routing": (dense_rank, bm_rank),
+                    "dense": (dense_rank,), "bm25": (bm_rank,)}[mode]
         kinds = aggregate_intent(query)
         if kinds and mode == "hybrid":  # "cheapest / average / how much ... in <city>": route to computed statistics
             rankings = (*rankings, self._summary_rank(qv[0], kinds))
