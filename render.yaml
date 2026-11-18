@@ -16,3 +16,5 @@ services:
         sync: false
       - key: RATE_LIMIT_PER_MIN
         value: "12"
+      - key: KEEP_WARM_UNTIL # self-ping /api/health every 10 min until this date (review period)
+        value: "2026-12-10"

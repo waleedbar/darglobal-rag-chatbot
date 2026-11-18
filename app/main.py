@@ -1,8 +1,10 @@
 """FastAPI app: chat UI at /, JSON API at /api/chat."""
 from __future__ import annotations
 
+import datetime as dt
 import logging
 import os
+import threading
 import time
 from collections import Counter, defaultdict, deque
 from pathlib import Path
@@ -42,6 +44,32 @@ class Ask(BaseModel):
 METRICS: Counter = Counter()
 LATENCIES: deque = deque(maxlen=500)
 STARTED = time.time()
+
+
+def _keep_warm() -> None:
+    """Free Render instances sleep after 15 idle minutes and take ~50 s to wake. While the hiring review is
+    running (until KEEP_WARM_UNTIL), the instance pings its own public /api/health every 10 minutes so
+    reviewers never hit a cold start. No LLM call, so no model quota is used. Off when the URL is unknown."""
+    url = os.getenv("RENDER_EXTERNAL_URL") or os.getenv("PUBLIC_URL")
+    until = os.getenv("KEEP_WARM_UNTIL", "")
+    if not url or not until:
+        return
+    import httpx
+
+    def loop() -> None:
+        while dt.date.today() <= dt.date.fromisoformat(until):
+            time.sleep(600)
+            try:
+                httpx.get(f"{url.rstrip('/')}/api/health", timeout=20)
+            except httpx.HTTPError as e:
+                log.warning("keep-warm ping failed: %s", e)
+        log.info("keep-warm period ended (%s)", until)
+
+    threading.Thread(target=loop, name="keep-warm", daemon=True).start()
+    log.info("keep-warm on until %s", until)
+
+
+_keep_warm()
 
 
 def _rate_limit(ip: str) -> None:

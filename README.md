@@ -183,8 +183,9 @@ image build to decrypt the Wasalt snapshot. (Hugging Face Docker Spaces now requ
   models at startup and falls back across them; repeated questions are served from a cache; a daily-quota error
   stops the fallback loop at once (it is account-wide) and the user gets the most relevant source passages,
   labelled as such - never an empty error.
-* *Cold starts*: free Render instances sleep after 15 idle minutes. `.github/workflows/keep-warm.yml` pings
-  `/api/health` (no LLM call) every 10 minutes during Saudi daytime - well inside the free instance-hour budget.
+* *Cold starts*: free Render instances sleep after 15 idle minutes (~50 s to wake). Until `KEEP_WARM_UNTIL`
+  (the review period) the app pings its own `/api/health` every 10 minutes (no LLM call, no quota), and
+  `.github/workflows/keep-warm.yml` pings it from outside as a backup (GitHub's scheduler is best-effort).
 
 **CI** (`.github/workflows/ci.yml`): unit tests (21, offline) → production image build → run under `--memory=512m`
 with a per-stage memory profile → API smoke tests in English, Arabic and a follow-up → retrieval evaluation + ablation
