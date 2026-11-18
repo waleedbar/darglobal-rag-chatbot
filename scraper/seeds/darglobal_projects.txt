@@ -1,0 +1,41 @@
+# Project pages linked from https://darglobal.co.uk/projects (public catalogue).
+# The scraper discovers links from that page automatically; this list is a fallback in case the
+# page markup changes. Format: URL | Project name | Location
+https://darglobal.co.uk/trump-international-hotel-and-tower-dubai | Trump International Hotel & Tower Dubai | Dubai, UAE
+https://darglobal.co.uk/d-villas-at-jge | D-Villas At Jumeirah Golf Estates | Dubai, UAE
+https://darglobal.co.uk/the-astera | The Astera, Interiors by Aston Martin | Al Marjan Island, RAK, UAE
+https://darglobal.co.uk/dg1 | DG1 | Dubai, UAE
+https://darglobal.co.uk/davinci-tower-by-pagani | Da Vinci Tower, Interiors By Pagani | Dubai, UAE
+https://darglobal.co.uk/urban-oasis-by-missoni | Urban Oasis by Missoni | Dubai, UAE
+https://darglobal.co.uk/w-residences | W Residences | Dubai, UAE
+https://darglobal.co.uk/one-of-one/project-pagani | The Pagani Penthouse | Dubai, UAE
+https://darglobal.co.uk/one-of-one/top-of-the-astera | Top of the Astera | Al Marjan Island, RAK, UAE
+https://darglobal.co.uk/tierra-viva | Tierra Viva, Design inspired by Automobili Lamborghini | Benahavís, Spain
+https://darglobal.co.uk/one-of-one/painite-villas-design-inspired-by-Automobili-Lamborghini | Painite Villas Design Inspired by Automobili Lamborghini | Benahavís, Spain
+https://darglobal.co.uk/marea | Marea, Interiors by Missoni | Cortesin, Spain
+https://darglobal.co.uk/les-vagues | Les Vagues by Elie Saab | Doha, Qatar
+https://darglobal.co.uk/lp/trump-international-qatar | Trump International Simaisma | Simaisma, Qatar
+https://darglobal.co.uk/aida-trump-international-hotel | Trump International Hotel, Oman | Muscat, Oman
+https://darglobal.co.uk/aida-trump-international-cliff-villas | Trump Cliff Villas | Muscat, Oman
+https://darglobal.co.uk/aida-trump-villas | Trump Golf Villas | Muscat, Oman
+https://darglobal.co.uk/landing-page/aida | Aida | Muscat, Oman
+https://darglobal.co.uk/fairway-villas-aida-oman | Fairway Villas | Aida, Oman
+https://darglobal.co.uk/one-of-one/fendi-casa-azure-oceanfront-villas | Azure Oceanfront Villas Interiors by Fendi Casa | AIDA, Oman
+https://darglobal.co.uk/amour-sans-detour | Amour Sans Detour | AIDA, Muscat, Oman
+https://darglobal.co.uk/the-great-escape-1-aida-oman | The Great Escape | Aida, Oman
+https://darglobal.co.uk/the-great-escape-2-aida-oman | The Great Escape 2 | Aida, Oman
+https://darglobal.co.uk/aida-coastal-investment-villas | Coastal Investment Villas | Muscat, Oman
+https://darglobal.co.uk/Sunrise-Haven-Luxury-Villas | Sunrise Haven | AIDA, Muscat, Oman
+https://darglobal.co.uk/marriott-residences-aida-oman | Marriott Residences | Aida, Oman
+https://darglobal.co.uk/amour-sans-detour-2 | Amour Sans Detour 2 | AIDA, Muscat, Oman
+https://darglobal.co.uk/play-project/nickelodeon | Nickelodeon Hotels & Resorts | AIDA, Oman
+https://darglobal.co.uk/the-mulliner | The Mulliner | 149 Old Park Lane, London, UK
+https://darglobal.co.uk/one-of-one/THE-ALBERT-HALL-MANSION | 7&8 Albert Hall Mansions | Overlooking Hyde Park, London, England
+https://darglobal.co.uk/trump-plaza/park-residences | Trump Park Residences | Amaya, Jeddah, KSA
+https://darglobal.co.uk/rayana/trump-mansions | Trump Mansions | Rayana, Wadi Safar, Riyadh, KSA
+https://darglobal.co.uk/trump-plaza/executive-residences | Trump Executive Residences | Amaya, Jeddah, KSA
+https://darglobal.co.uk/amaya/amaya-plots | Amaya | Amaya, Jeddah, KSA
+https://darglobal.co.uk/amaya/padel-living | Padel Living Residences | Jeddah, KSA
+https://darglobal.co.uk/neptune | Neptune, Interiors by Mouawad | Riyadh, KSA
+https://darglobal.co.uk/trump-tower-jeddah | Trump Tower Jeddah | Jeddah, KSA
+https://darglobal.co.uk/rayana/darglobal-mansions-fendi-casa | DarGlobal Mansions Interiors by Fendi Casa | Wadi Safar, Riyadh, Saudi Arabia
