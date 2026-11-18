@@ -38,7 +38,8 @@ def store():
     (tmp / "raw").mkdir()
     (tmp / "raw" / "docs.jsonl").write_text("\n".join(json.dumps(d) for d in DOCS))
     stats = build(HashEmbedder(), raw_dir=tmp / "raw", out=tmp / "index")
-    assert stats["docs"] == len(DOCS) + 2  # + 2 price summaries (Villa / All types in Jeddah)
+    # + statistics docs: cheapest / most expensive / price stats for "Villa" and "All types" in Jeddah
+    assert stats["docs"] == len(DOCS) + 6
     return Store(HashEmbedder(), index_dir=tmp / "index")
 
 
@@ -81,9 +82,19 @@ def test_hybrid_retrieval_finds_the_right_project(store):
 
 
 def test_price_summary_documents():
-    s = {d["title"]: d for d in build_summaries(DOCS)}
-    t = s["Villa for sale in Jeddah - price summary"]["text"]
-    assert "Lowest price: 1,200,000 SAR" in t and "Highest price: 3,500,000 SAR" in t and "Median price: 2,000,000" in t
+    s = {d["url"].rsplit("#", 1)[1]: d for d in build_summaries(DOCS)}
+    assert "The cheapest is 1,200,000 SAR" in s["cheapest-villa"]["text"] and "أرخص فلل للبيع في جدة" in s["cheapest-villa"]["text"]
+    assert "The most expensive is 3,500,000 SAR" in s["most-expensive-villa"]["text"]
+    assert "median 2,000,000 SAR" in s["price-stats-villa"]["text"] and "sample of 3 Wasalt listings" in s["price-stats-villa"]["text"]
+
+
+def test_aggregate_questions_route_to_statistics(store):
+    from rag.text import aggregate_intent
+    assert aggregate_intent("ما هي أرخص فيلا في جدة؟") == ("cheapest",)
+    assert aggregate_intent("When is the handover of Neptune?") == ()
+    for q, frag in [("What is the cheapest villa in Jeddah?", "#cheapest-villa"), ("أغلى فيلا في جدة", "#most-expensive-villa"),
+                    ("average villa price in Jeddah", "#price-stats-villa")]:
+        assert any(frag in h["url"] for h in store.search(q, k=3)), q
 
 
 def test_answer_with_citations_renumbered(store):

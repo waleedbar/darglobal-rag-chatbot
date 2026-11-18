@@ -12,7 +12,7 @@ from rank_bm25 import BM25Okapi
 
 from .chunking import chunk_doc
 from .summaries import build_summaries
-from .text import expand_query, tokenize
+from .text import aggregate_intent, expand_query, tokenize
 
 log = logging.getLogger("rag.store")
 ROOT = Path(__file__).resolve().parent.parent
@@ -57,6 +57,19 @@ class Store:
         self.chunks = [json.loads(line) for line in (index_dir / "chunks.jsonl").read_text(encoding="utf-8").splitlines()]
         self.bm25 = BM25Okapi([tokenize(c["text"]) for c in self.chunks])
         self.stats = json.loads((index_dir / "stats.json").read_text())
+        self.summary_ids = [i for i, c in enumerate(self.chunks) if c.get("type") == "summary"]
+        self.summary_vecs = (np.stack([self.index.reconstruct(i) for i in self.summary_ids])
+                             if self.summary_ids else np.zeros((0, self.index.d), dtype="float32"))
+
+    def _summary_rank(self, qv: np.ndarray, kinds: tuple[str, ...]) -> dict[int, int]:
+        """Rank the pre-computed statistics documents: matching kind first (e.g. #cheapest), then by similarity."""
+        if not self.summary_ids:
+            return {}
+        sims = self.summary_vecs @ qv
+        frag = lambda i: self.chunks[i]["url"].rsplit("#", 1)[-1]  # noqa: E731  e.g. "cheapest-villa"
+        order = sorted(range(len(self.summary_ids)),
+                       key=lambda j: (not frag(self.summary_ids[j]).startswith(kinds), -sims[j]))
+        return {self.summary_ids[j]: r for r, j in enumerate(order[:10])}
 
     def search(self, query: str, k: int = 6, pool: int = 30, mode: str = "hybrid") -> list[dict]:
         """Hybrid search. Returns chunks with `score` (cosine of best dense match) and `rrf`.
@@ -72,6 +85,9 @@ class Store:
         bm_rank = {int(i): r for r, i in enumerate(top_bm) if bm[i] > 0}
         fused: dict[int, float] = {}
         rankings = {"hybrid": (dense_rank, bm_rank), "dense": (dense_rank,), "bm25": (bm_rank,)}[mode]
+        kinds = aggregate_intent(query)
+        if kinds and mode == "hybrid":  # "cheapest / average / how much ... in <city>": route to computed statistics
+            rankings = (*rankings, self._summary_rank(qv[0], kinds))
         for ranks in rankings:
             for i, r in ranks.items():
                 fused[i] = fused.get(i, 0.0) + 1.0 / (60 + r)
