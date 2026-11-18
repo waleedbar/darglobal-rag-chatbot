@@ -45,6 +45,7 @@ def build(embedder, raw_dir: Path = RAW, out: Path = INDEX_DIR, chunk_chars: int
     (out / "chunks.jsonl").write_text("\n".join(json.dumps(c, ensure_ascii=False) for c in chunks), encoding="utf-8")
     stats = {"docs": len(docs), "chunks": len(chunks), "dim": int(vecs.shape[1]), "embedder": embedder.name,
              "by_source": {s: sum(1 for d in docs if d["source"] == s) for s in {d["source"] for d in docs}},
+             "by_type": {t: sum(1 for d in docs if d.get("type") == t) for t in {d.get("type") for d in docs}},
              "scraped_at": max((d.get("scraped_at") or "" for d in docs), default="")}
     (out / "stats.json").write_text(json.dumps(stats, indent=2))
     return stats

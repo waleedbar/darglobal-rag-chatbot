@@ -1,137 +1,389 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Dar Global &amp; Wasalt property assistant</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dar Global property assistant · demo</title>
+<meta name="description" content="Bilingual AI assistant answering questions about Dar Global projects and Wasalt listings from public pages, with sources. Demo for a hiring assignment - not an official Dar Global website.">
+<meta name="theme-color" content="#081C2A">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23081C2A'/%3E%3Cpath d='M18 50V30a14 14 0 0 1 28 0v20' fill='none' stroke='%23C9B48A' stroke-width='4'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=IBM+Plex+Sans+Arabic:wght@300;400;500&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
-  :root { --ink:#1f2933; --muted:#64748b; --line:#e2e8f0; --brand:#0f3d3e; --accent:#b08d57; --bg:#f7f6f2; --warn:#fffaf0; }
-  * { box-sizing: border-box; }
-  body { margin:0; font:15px/1.6 system-ui, -apple-system, "Segoe UI", Tahoma, sans-serif; color:var(--ink); background:var(--bg); }
-  header { background:var(--brand); color:#fff; padding:16px 20px; }
-  .head { max-width:860px; margin:0 auto; display:flex; gap:12px; align-items:center; justify-content:space-between; }
-  header h1 { margin:0; font-size:19px; font-weight:600; letter-spacing:.2px; }
-  header p { margin:3px 0 0; font-size:13px; opacity:.8; }
-  header .links { display:flex; gap:8px; flex-shrink:0; }
-  header .links a, header .links button { color:#fff; border:1px solid rgba(255,255,255,.35); background:transparent; border-radius:8px;
-    padding:5px 10px; font:inherit; font-size:13px; text-decoration:none; cursor:pointer; }
-  header .links a:hover, header .links button:hover { background:rgba(255,255,255,.1); }
-  main { max-width:860px; margin:0 auto; padding:16px 16px 150px; }
-  .hint { color:var(--muted); font-size:13px; margin:6px 0 4px; }
-  .examples { display:flex; flex-wrap:wrap; gap:8px; margin:6px 0 16px; }
-  .examples button { border:1px solid var(--line); background:#fff; border-radius:999px; padding:6px 12px; font-size:13px; cursor:pointer; color:var(--ink); }
-  .examples button:hover { border-color:var(--accent); }
-  .msg { margin:14px 0; display:flex; }
+  :root {
+    --navy:#081C2A; --navy-2:#0F2C40; --bronze:#6B5E43; --gold:#C9B48A; --gold-soft:#E7DCC6;
+    --mist:#D7E3EB; --ivory:#F8F6F1; --paper:#FFFFFF; --ink:#16212B; --muted:#5D6670; --line:#E3E1DB;
+    --display:"Cormorant Garamond", "IBM Plex Sans Arabic", Georgia, serif;
+    --sans:"Jost", "IBM Plex Sans Arabic", system-ui, -apple-system, "Segoe UI", Tahoma, sans-serif;
+    --ease:cubic-bezier(.2,.7,.2,1);
+  }
+  * { box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
+  body { margin:0; font:300 16px/1.65 var(--sans); color:var(--ink); background:var(--ivory); -webkit-font-smoothing:antialiased; }
+  [dir=rtl] body, :lang(ar) { font-family:"IBM Plex Sans Arabic", var(--sans); }
+  a { color:inherit; }
+  :focus-visible { outline:2px solid var(--bronze); outline-offset:3px; }
+  .sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+
+  /* ---------- header ---------- */
+  .notice { background:var(--mist); color:var(--navy); font-size:12.5px; letter-spacing:.02em; text-align:center; padding:7px 16px; }
+  .notice b { font-weight:500; }
+  header.top { position:sticky; top:0; z-index:20; background:rgba(255,255,255,.94); backdrop-filter:saturate(1.2) blur(8px);
+    border-bottom:1px solid var(--line); }
+  .top-in { max-width:1180px; margin:0 auto; padding:14px 24px; display:flex; align-items:center; justify-content:space-between; gap:16px; }
+  .brand { display:flex; align-items:center; gap:14px; text-decoration:none; }
+  .mark { width:34px; height:34px; flex:none; }
+  .brand .name { white-space:nowrap; font:600 22px/1 var(--display); letter-spacing:.32em; text-transform:uppercase; color:var(--navy); }
+  .brand .sub { white-space:nowrap; display:block; margin-top:5px; font:500 10.5px/1 var(--sans); letter-spacing:.28em; text-transform:uppercase; color:var(--bronze); }
+  .actions { display:flex; align-items:center; gap:10px; }
+  .lang { display:flex; align-items:center; gap:8px; font-size:13px; }
+  .lang button { background:none; border:0; padding:4px 2px; font:inherit; color:var(--muted); cursor:pointer; }
+  .lang button[aria-pressed=true] { color:var(--ink); font-weight:500; }
+  .lang span { color:var(--line); }
+  .btn { white-space:nowrap; display:inline-flex; align-items:center; gap:8px; border:1px solid var(--ink); background:transparent; color:var(--ink);
+    padding:9px 16px; font:500 11.5px/1 var(--sans); letter-spacing:.18em; text-transform:uppercase; text-decoration:none; cursor:pointer;
+    transition:background .25s var(--ease), color .25s var(--ease); }
+  .btn:hover { background:var(--ink); color:#fff; }
+  .btn.ghost { border-color:transparent; }
+  .btn.ghost:hover { background:transparent; color:var(--bronze); }
+
+  /* ---------- hero ---------- */
+  .hero { position:relative; overflow:hidden; color:#fff; isolation:isolate;
+    background:linear-gradient(180deg, #06141F 0%, #0B2333 45%, #1E3446 72%, #6B5E43 135%); transition:padding .6s var(--ease); }
+  .hero::before { content:""; position:absolute; inset:-30% -10% auto; height:120%; z-index:-1; opacity:.55;
+    background:radial-gradient(60% 50% at 70% 85%, rgba(201,180,138,.35), transparent 70%); animation:glow 14s ease-in-out infinite alternate; }
+  @keyframes glow { to { transform:translateX(-8%); opacity:.8; } }
+  .skyline { position:absolute; inset:auto 0 0 0; width:100%; height:62%; z-index:-1; opacity:.85;
+    -webkit-mask-image:linear-gradient(90deg, rgba(0,0,0,.18) 0%, rgba(0,0,0,.35) 45%, #000 75%); mask-image:linear-gradient(90deg, rgba(0,0,0,.18) 0%, rgba(0,0,0,.35) 45%, #000 75%); }
+  [dir=rtl] .skyline { -webkit-mask-image:linear-gradient(270deg, rgba(0,0,0,.18) 0%, rgba(0,0,0,.35) 45%, #000 75%); mask-image:linear-gradient(270deg, rgba(0,0,0,.18) 0%, rgba(0,0,0,.35) 45%, #000 75%); }
+  .skyline .draw { stroke-dasharray:1400; stroke-dashoffset:1400; animation:draw 3.2s var(--ease) .2s forwards; }
+  .skyline .win { animation:twinkle 4s ease-in-out infinite; }
+  @keyframes draw { to { stroke-dashoffset:0; } }
+  @keyframes twinkle { 50% { opacity:.25; } }
+  .hero-in { max-width:1180px; margin:0 auto; padding:52px 24px 128px; transition:padding .6s var(--ease); }
+  .eyebrow { font:500 11.5px/1 var(--sans); letter-spacing:.32em; text-transform:uppercase; color:var(--gold); }
+  .hero h1 { margin:18px 0 10px; max-width:760px; font:500 clamp(34px, 5vw, 58px)/1.08 var(--display); letter-spacing:.02em; text-transform:uppercase; }
+  .hero h1 em { font-style:normal; color:var(--gold); }
+  .hero .ar { font:400 clamp(17px, 2.2vw, 22px)/1.6 "IBM Plex Sans Arabic", sans-serif; color:var(--gold-soft); margin:0 0 6px; text-align:left; }
+  .hero .lead { max-width:620px; margin:0; color:rgba(255,255,255,.78); font-size:16px; }
+  .stats { display:flex; flex-wrap:wrap; gap:34px; margin-top:28px; }
+  .stat b { display:block; font:500 34px/1 var(--display); color:#fff; }
+  .stat span { font-size:11.5px; letter-spacing:.2em; text-transform:uppercase; color:rgba(255,255,255,.65); }
+  .fade-up { opacity:0; transform:translateY(14px); animation:up .9s var(--ease) forwards; }
+  .d1 { animation-delay:.1s } .d2 { animation-delay:.25s } .d3 { animation-delay:.4s } .d4 { animation-delay:.55s }
+  @keyframes up { to { opacity:1; transform:none; } }
+
+  /* ---------- suggestions ---------- */
+  .suggest { max-width:1180px; margin:-96px auto 0; padding:0 24px; position:relative; z-index:2; transition:opacity .4s, max-height .6s var(--ease); max-height:900px; }
+  .suggest h2 { margin:0 0 12px; font:500 11.5px/1 var(--sans); letter-spacing:.28em; text-transform:uppercase; color:var(--gold); }
+  .cards { display:grid; grid-template-columns:repeat(3, 1fr); gap:1px; background:var(--line); border:1px solid var(--line); box-shadow:0 30px 60px -30px rgba(8,28,42,.35); }
+  .card { text-align:start; background:var(--paper); border:0; padding:22px 22px 20px; cursor:pointer; font:inherit; color:var(--ink);
+    display:flex; flex-direction:column; gap:10px; min-height:118px; transition:background .25s var(--ease); position:relative; }
+  .card:hover { background:#FBFAF7; }
+  .card .k { font:500 10.5px/1 var(--sans); letter-spacing:.24em; text-transform:uppercase; color:var(--bronze); }
+  .card .q { font:400 16px/1.45 var(--sans); }
+  .card .q[dir=rtl] { font-family:"IBM Plex Sans Arabic", sans-serif; }
+  .card .go { position:absolute; inset-inline-end:18px; bottom:16px; color:var(--bronze); opacity:0; transform:translateX(-4px); transition:.25s var(--ease); }
+  [dir=rtl] .card .go { transform:scaleX(-1) translateX(-4px); }
+  .card:hover .go, .card:focus-visible .go { opacity:1; transform:none; }
+  [dir=rtl] .card:hover .go { transform:scaleX(-1); }
+
+  /* chatting state: compact hero, suggestions folded away */
+  body.chatting .hero-in { padding:28px 24px 30px; }
+  body.chatting .hero .lead, body.chatting .stats, body.chatting .hero .ar { display:none; }
+  body.chatting .hero h1 { font-size:clamp(22px, 3vw, 30px); margin:10px 0 0; }
+  body.chatting .skyline { height:100%; opacity:.45; }
+  body.chatting .suggest { opacity:0; max-height:0; overflow:hidden; margin-top:0; pointer-events:none; }
+
+  /* ---------- chat ---------- */
+  main { max-width:860px; margin:0 auto; padding:40px 20px 190px; }
+  #chat { display:flex; flex-direction:column; gap:22px; }
+  .msg { display:flex; animation:msgIn .45s var(--ease); }
+  @keyframes msgIn { from { opacity:0; transform:translateY(10px); } }
   .msg.user { justify-content:flex-end; }
-  .bubble { max-width:85%; padding:12px 14px; border-radius:14px; background:#fff; border:1px solid var(--line); white-space:pre-wrap; overflow-wrap:anywhere; }
-  .user .bubble { background:var(--brand); color:#fff; border-color:var(--brand); }
-  .cite { font-size:.72em; background:#e8efee; color:var(--brand); border-radius:6px; padding:0 4px; margin:0 1px; }
-  .idk .bubble, .degraded .bubble { border-color:#f1c27d; background:var(--warn); }
-  .sources { margin-top:10px; border-top:1px solid var(--line); padding-top:8px; font-size:13px; white-space:normal; }
-  .sources a { color:var(--brand); font-weight:600; text-decoration:none; }
-  .sources a:hover { text-decoration:underline; }
-  .sources .src { margin:4px 0; }
-  .tag { font-size:11px; border-radius:6px; padding:1px 6px; margin-inline-start:6px; background:#eef2f2; color:var(--muted); }
-  .meta { color:var(--muted); font-size:12px; margin-top:6px; }
-  .typing span { display:inline-block; width:6px; height:6px; margin:0 2px; border-radius:50%; background:var(--muted); animation:b 1s infinite; }
-  .typing span:nth-child(2) { animation-delay:.15s } .typing span:nth-child(3) { animation-delay:.3s }
-  @keyframes b { 0%,80%,100% { opacity:.25 } 40% { opacity:1 } }
-  form { position:fixed; bottom:0; left:0; right:0; background:linear-gradient(transparent, var(--bg) 30%); padding:18px 16px; }
-  .bar { max-width:860px; margin:0 auto; display:flex; gap:8px; }
-  textarea { flex:1; resize:none; height:52px; padding:14px; border-radius:12px; border:1px solid var(--line); font:inherit; }
-  textarea:focus { outline:2px solid var(--accent); outline-offset:-1px; }
-  button.send { background:var(--accent); color:#fff; border:0; border-radius:12px; padding:0 20px; font-weight:600; cursor:pointer; }
-  button.send:disabled { opacity:.5; }
-  [dir=rtl] { text-align:right; }
-  footer { color:var(--muted); font-size:12px; text-align:center; margin-top:24px; }
-  @media (max-width:600px) { header p { display:none } .bubble { max-width:95% } }
+  .bubble { max-width:min(680px, 88%); padding:16px 20px; background:var(--paper); border:1px solid var(--line); white-space:pre-wrap; overflow-wrap:anywhere;
+    box-shadow:0 10px 30px -22px rgba(8,28,42,.4); }
+  .user .bubble { background:var(--navy); color:#fff; border-color:var(--navy); font-weight:400; }
+  .bot .bubble { border-inline-start:2px solid var(--bronze); }
+  .bot.idk .bubble, .bot.degraded .bubble { border-inline-start-color:#B7893A; background:#FFFCF5; }
+  .who { display:block; margin-bottom:6px; font:500 10.5px/1 var(--sans); letter-spacing:.24em; text-transform:uppercase; color:var(--bronze); white-space:normal; }
+  .bubble b { font-weight:500; }
+  sup.cite { display:inline-block; min-width:18px; margin:0 2px; padding:0 5px; font:500 10.5px/16px var(--sans); text-align:center;
+    color:var(--bronze); border:1px solid var(--gold); background:#FBF8F1; cursor:pointer; vertical-align:super; }
+  sup.cite:hover { background:var(--bronze); color:#fff; }
+  .sources { margin-top:16px; display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:10px; white-space:normal; }
+  .src { display:flex; flex-direction:column; gap:4px; padding:11px 13px; border:1px solid var(--line); background:#FCFBF8; text-decoration:none;
+    transition:border-color .2s, transform .2s var(--ease), box-shadow .2s; min-width:0; }
+  .src:hover, .src.flash { border-color:var(--bronze); transform:translateY(-2px); box-shadow:0 8px 20px -14px rgba(8,28,42,.5); }
+  .src .tag { font:500 10px/1 var(--sans); letter-spacing:.2em; text-transform:uppercase; color:var(--bronze); display:flex; justify-content:space-between; gap:8px; }
+  .src .t { font-weight:400; font-size:14px; line-height:1.35; color:var(--ink); overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+  .src .host { font-size:12px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; direction:ltr; text-align:start; }
+  .meta { margin-top:12px; display:flex; flex-wrap:wrap; gap:6px 14px; align-items:center; font-size:12px; color:var(--muted); white-space:normal; }
+  .meta button { background:none; border:0; padding:0; font:inherit; color:var(--bronze); cursor:pointer; letter-spacing:.06em; }
+  .typing { display:inline-flex; align-items:center; gap:10px; color:var(--muted); font-size:14px; white-space:normal; }
+  .dots { display:inline-flex; gap:5px; }
+  .dots i { width:6px; height:6px; background:var(--bronze); border-radius:50%; animation:dot 1.1s infinite ease-in-out; }
+  .dots i:nth-child(2) { animation-delay:.15s } .dots i:nth-child(3) { animation-delay:.3s }
+  @keyframes dot { 0%,80%,100% { opacity:.2; transform:translateY(0) } 40% { opacity:1; transform:translateY(-3px) } }
+
+  /* ---------- composer ---------- */
+  form.composer { position:fixed; inset:auto 0 0 0; z-index:15; padding:18px 20px calc(16px + env(safe-area-inset-bottom));
+    background:linear-gradient(to top, var(--ivory) 70%, rgba(248,246,241,0)); }
+  .bar { max-width:860px; margin:0 auto; display:flex; align-items:stretch; background:var(--paper); border:1px solid #CFCAC0;
+    box-shadow:0 18px 40px -24px rgba(8,28,42,.45); transition:border-color .2s; }
+  .bar:focus-within { border-color:var(--bronze); box-shadow:0 0 0 3px rgba(107,94,67,.18), 0 18px 40px -24px rgba(8,28,42,.45); }
+  textarea:focus-visible { outline:none; }
+  textarea { flex:1; resize:none; border:0; outline:0; background:transparent; padding:16px 18px; min-height:56px; max-height:160px;
+    font:400 15.5px/1.5 var(--sans); color:var(--ink); }
+  textarea::placeholder { color:#8A9098; }
+  .send { flex:none; border:0; background:var(--bronze); color:#fff; padding:0 26px; font:500 12px/1 var(--sans); letter-spacing:.22em;
+    text-transform:uppercase; cursor:pointer; transition:background .2s; }
+  .send:hover { background:#57492F; }
+  .send:disabled { background:#A69C88; cursor:default; }
+  .hintline { max-width:860px; margin:8px auto 0; font-size:11.5px; color:var(--muted); text-align:center; }
+
+  /* ---------- footer ---------- */
+  footer { border-top:1px solid var(--line); background:var(--paper); }
+  .foot { max-width:1180px; margin:0 auto; padding:26px 24px 140px; display:flex; flex-wrap:wrap; gap:10px 30px; justify-content:space-between;
+    font-size:12.5px; color:var(--muted); }
+  .foot strong { color:var(--ink); font-weight:500; }
+  .foot a { color:var(--bronze); }
+
+  /* Arabic script must not be letter-spaced (it breaks the joined letters) */
+  [dir=rtl] .eyebrow, [dir=rtl] .brand .sub, [dir=rtl] .btn, [dir=rtl] .card .k, [dir=rtl] .stat span, [dir=rtl] .suggest h2,
+  [dir=rtl] .who, [dir=rtl] .send, [dir=rtl] .src .tag, .bubble[dir=rtl] .who, .card .k:lang(ar) { letter-spacing:0; }
+  [dir=rtl] .brand .sub { font-size:12px; }
+  @media (max-width:900px) { .cards { grid-template-columns:repeat(2, 1fr); } }
+  @media (max-width:640px) {
+    .top-in { padding:12px 16px; }
+    .brand { gap:10px; }
+    .brand .name { font-size:16px; letter-spacing:.2em; }
+    .brand .sub { font-size:8.5px; letter-spacing:.2em; }
+    .mark { width:28px; height:28px; }
+    .actions { gap:8px; }
+    .actions .btn.ghost, .lang span { display:none; }
+    .lang { gap:6px; font-size:12px; }
+    .btn { padding:8px 10px; font-size:10px; letter-spacing:.1em; }
+    .notice { font-size:11.5px; padding:6px 12px; }
+    .skyline { height:38%; opacity:.6; }
+    .hero-in { padding:36px 18px 116px; }
+    .hero .lead { font-size:15px; }
+    .stats { gap:22px; } .stat b { font-size:28px; }
+    .suggest { padding:0 14px; margin-top:-84px; }
+    .cards { grid-template-columns:1fr; }
+    .card { min-height:0; padding:16px 18px; }
+    main { padding:28px 14px 180px; }
+    .bubble { max-width:94%; padding:14px 16px; }
+    .sources { grid-template-columns:1fr; }
+    form.composer { padding:12px 12px calc(12px + env(safe-area-inset-bottom)); }
+    .send { padding:0 18px; }
+  }
+  @media (prefers-reduced-motion:reduce) {
+    *, *::before { animation:none !important; transition:none !important; }
+    .fade-up { opacity:1; transform:none; } .skyline .draw { stroke-dashoffset:0; }
+  }
 </style>
 </head>
 <body>
-<header>
-  <div class="head">
-    <div>
-      <h1>Dar Global &amp; Wasalt property assistant · المساعد العقاري</h1>
-      <p>Answers only from public pages of darglobal.co.uk and wasalt.sa, with links to the source. Ask in English or Arabic.</p>
-    </div>
-    <div class="links">
-      <button type="button" id="reset" title="Start a new conversation">New chat</button>
-      <a href="https://github.com/waleedbar/darglobal-rag-chatbot" target="_blank" rel="noopener">How it works</a>
+<a class="sr-only" href="#q">Skip to the question box</a>
+<div class="notice" role="note"><b data-i18n="noticeB">Demo built for the Dar Global hiring assignment.</b> <span data-i18n="noticeS">Not an official Dar Global website.</span></div>
+<header class="top">
+  <div class="top-in">
+    <a class="brand" href="/" aria-label="Dar Global property assistant - home">
+      <svg class="mark" viewBox="0 0 40 40" aria-hidden="true"><rect x=".5" y=".5" width="39" height="39" fill="none" stroke="#6B5E43"/><path d="M11 33V19a9 9 0 0 1 18 0v14" fill="none" stroke="#081C2A" stroke-width="1.6"/><path d="M15.5 33V20a4.5 4.5 0 0 1 9 0v13" fill="none" stroke="#6B5E43" stroke-width="1.2"/></svg>
+      <span><span class="name">Dar Global</span><span class="sub" data-i18n="sub">Property Assistant</span></span>
+    </a>
+    <div class="actions">
+      <div class="lang" role="group" aria-label="Language">
+        <button type="button" data-lang="en" aria-pressed="true">EN</button><span>|</span><button type="button" data-lang="ar" aria-pressed="false" lang="ar">العربية</button>
+      </div>
+      <a class="btn ghost" href="https://github.com/waleedbar/darglobal-rag-chatbot" target="_blank" rel="noopener" data-i18n="how">How it works</a>
+      <button class="btn" type="button" id="reset" data-i18n="new">New chat</button>
     </div>
   </div>
 </header>
-<main>
-  <div class="hint">Try one, then ask a follow-up such as “and when is its handover?” · جرّب سؤالاً ثم اسأل سؤال متابعة</div>
-  <div class="examples" id="examples"></div>
-  <div id="chat" aria-live="polite"></div>
-  <footer id="stats"></footer>
-</main>
-<form id="f">
-  <div class="bar">
-    <textarea id="q" maxlength="1000" placeholder="Ask about a project, a city, prices, amenities…  اسأل عن مشروع أو مدينة أو الأسعار" required></textarea>
-    <button class="send" id="send">Ask</button>
+
+<section class="hero" aria-labelledby="hero-title">
+  <svg class="skyline" viewBox="0 0 1440 360" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+    <defs><linearGradient id="fadeg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#C9B48A" stop-opacity=".9"/><stop offset="1" stop-color="#C9B48A" stop-opacity=".15"/></linearGradient></defs>
+    <g fill="none" stroke="url(#fadeg)" stroke-width="1.2">
+      <path class="draw" d="M0 360V300h60v-40h40v40h30V250h50v110"/>
+      <path class="draw" d="M210 360V210h56v150M238 210v-40"/>
+      <path class="draw" d="M300 360V270a40 40 0 0 1 80 0v90M322 360v-84a18 18 0 0 1 36 0v84"/>
+      <path class="draw" d="M420 360V150l36-30 36 30v210M456 120V80"/>
+      <path class="draw" d="M530 360V230h90v130M548 230v-22h54v22"/>
+      <path class="draw" d="M660 360V120h22V90h40v30h22v240M703 90V40"/>
+      <path class="draw" d="M790 360V250a55 55 0 0 1 110 0v110M818 360v-104a27 27 0 0 1 54 0v104"/>
+      <path class="draw" d="M940 360V180l50-40 50 40v180"/>
+      <path class="draw" d="M1080 360V230h40v-30h40v30h40v130"/>
+      <path class="draw" d="M1240 360V140h64v220M1272 140V96"/>
+      <path class="draw" d="M1340 360V280a50 50 0 0 1 100 0v80"/>
+      <path d="M0 359.5h1440" stroke="#C9B48A" stroke-opacity=".5"/>
+    </g>
+    <g fill="#E7DCC6">
+      <rect class="win" x="430" y="170" width="3" height="3"/><rect class="win" x="470" y="210" width="3" height="3" style="animation-delay:1.3s"/>
+      <rect class="win" x="676" y="150" width="3" height="3" style="animation-delay:.6s"/><rect class="win" x="716" y="230" width="3" height="3" style="animation-delay:2.1s"/>
+      <rect class="win" x="1256" y="180" width="3" height="3" style="animation-delay:1.7s"/><rect class="win" x="1288" y="250" width="3" height="3" style="animation-delay:.9s"/>
+      <rect class="win" x="955" y="220" width="3" height="3" style="animation-delay:2.6s"/><rect class="win" x="1020" y="260" width="3" height="3" style="animation-delay:.3s"/>
+    </g>
+  </svg>
+  <div class="hero-in">
+    <div class="eyebrow fade-up d1" data-i18n="eyebrow">AI concierge · Dar Global &amp; Wasalt</div>
+    <h1 id="hero-title" class="fade-up d2" data-i18n-html="title">Ask anything about <em>luxury living</em></h1>
+    <p class="ar fade-up d3" lang="ar" dir="rtl">اسأل عن مشاريع دار جلوبال وعقارات وصلت</p>
+    <p class="lead fade-up d3" data-i18n="lead">Answers come only from public darglobal.co.uk and wasalt.sa pages, every one with its sources - and an honest "I don't know" when the data is silent.</p>
+    <div class="stats fade-up d4" aria-label="Index statistics">
+      <div class="stat"><b data-count="projects">38</b><span data-i18n="sProjects">Dar Global projects</span></div>
+      <div class="stat"><b>6</b><span data-i18n="sCountries">Countries</span></div>
+      <div class="stat"><b data-count="listings">236</b><span data-i18n="sListings">Wasalt listings</span></div>
+      <div class="stat"><b>2</b><span data-i18n="sLangs">Languages</span></div>
+    </div>
   </div>
+</section>
+
+<section class="suggest" aria-labelledby="sugg-title">
+  <h2 id="sugg-title" data-i18n="try">Try asking</h2>
+  <div class="cards" id="cards"></div>
+</section>
+
+<main>
+  <div id="chat" aria-live="polite" aria-label="Conversation"></div>
+</main>
+
+<footer>
+  <div class="foot">
+    <div><strong data-i18n="noticeB">Demo built for the Dar Global hiring assignment.</strong> <span data-i18n="noticeS">Not an official Dar Global website.</span></div>
+    <div><span data-i18n="data">Data: public pages of darglobal.co.uk · Source: Wasalt.sa</span> · <span id="stats"></span> · <a href="https://github.com/waleedbar/darglobal-rag-chatbot" target="_blank" rel="noopener">GitHub</a></div>
+  </div>
+</footer>
+
+<form class="composer" id="f">
+  <div class="bar">
+    <label class="sr-only" for="q" data-i18n="label">Your question</label>
+    <textarea id="q" rows="1" maxlength="1000" required data-i18n-ph="ph" placeholder="Ask about a project, a city or a price…"></textarea>
+    <button class="send" id="send" data-i18n="ask">Ask</button>
+  </div>
+  <div class="hintline" data-i18n="hint">English or Arabic · follow-up questions keep the context</div>
 </form>
+
 <script>
-const EXAMPLES = [
-  "Which Dar Global projects are in Saudi Arabia?",
-  "Tell me about Neptune, Interiors by Mouawad",
-  "What is the cheapest villa for sale in Jeddah on Wasalt?",
-  "How much does a 3-bedroom apartment cost in Jeddah?",
-  "ما هي مشاريع دار جلوبال في عُمان؟",
-  "كم متوسط سعر الشقق للبيع في الرياض؟",
-  "What is the price of a Trump Tower Jeddah apartment?",
-  "Does Dar Global have projects in Japan?"
-];
-const chat = document.getElementById('chat'), q = document.getElementById('q'), send = document.getElementById('send');
-let history = [];  // recent turns sent to the API so follow-up questions work
+const T = {
+  en: { noticeB:"Demo built for the Dar Global hiring assignment.", noticeS:"Not an official Dar Global website.", sub:"Property Assistant",
+        how:"How it works", new:"New chat", eyebrow:"AI concierge · Dar Global & Wasalt", title:"Ask anything about <em>luxury living</em>",
+        lead:"Answers come only from public darglobal.co.uk and wasalt.sa pages, every one with its sources - and an honest \"I don't know\" when the data is silent.",
+        sProjects:"Dar Global projects", sCountries:"Countries", sListings:"Wasalt listings", sLangs:"Languages", try:"Try asking",
+        data:"Data: public pages of darglobal.co.uk · Source: Wasalt.sa", label:"Your question", ph:"Ask about a project, a city or a price…",
+        ask:"Ask", hint:"English or Arabic · follow-up questions keep the context", you:"You", bot:"Assistant", searching:"Searching the sources…",
+        sources:"Sources", copy:"Copy", copied:"Copied", cached:"instant (cached)", err:"Network error - the free server may be waking up. Please retry.",
+        bad:"Please rephrase the question." },
+  ar: { noticeB:"نسخة تجريبية أُعدّت لمهمة التوظيف في دار جلوبال.", noticeS:"ليس موقعاً رسمياً لدار جلوبال.", sub:"المساعد العقاري",
+        how:"كيف يعمل", new:"محادثة جديدة", eyebrow:"مساعد ذكي · دار جلوبال ووصلت", title:"اسأل عن <em>السكن الفاخر</em>",
+        lead:"الإجابات من صفحات darglobal.co.uk و wasalt.sa العامة فقط، مع ذكر المصادر دائماً — وإجابة صريحة «لا أعرف» حين لا تتوفر المعلومة.",
+        sProjects:"مشروعاً لدار جلوبال", sCountries:"دول", sListings:"إعلاناً على وصلت", sLangs:"لغتان", try:"جرّب أن تسأل",
+        data:"البيانات: صفحات darglobal.co.uk العامة · المصدر: Wasalt.sa", label:"سؤالك", ph:"اسأل عن مشروع أو مدينة أو سعر…",
+        ask:"اسأل", hint:"بالعربية أو الإنجليزية · أسئلة المتابعة تحتفظ بالسياق", you:"أنت", bot:"المساعد", searching:"جارٍ البحث في المصادر…",
+        sources:"المصادر", copy:"نسخ", copied:"تم النسخ", cached:"فوري (من الذاكرة)", err:"خطأ في الشبكة — قد يكون الخادم المجاني في طور التشغيل. حاول مجدداً.",
+        bad:"يرجى إعادة صياغة السؤال." }
+};
+const EXAMPLES = {
+  en: [["Dar Global · Riyadh", "When is the handover of Neptune, Interiors by Mouawad?"],
+       ["Dar Global · Oman", "Which Dar Global projects are in Oman?"],
+       ["Wasalt · Jeddah", "What is the cheapest villa for sale in Jeddah on Wasalt?"],
+       ["Wasalt · Riyadh", "What is the median price of apartments for sale in Riyadh?"],
+       ["Dar Global · Pricing", "What is the price of a Trump Tower Jeddah apartment?"],
+       ["In Arabic", "ما هي مشاريع دار جلوبال في عُمان؟"]],
+  ar: [["دار جلوبال · الرياض", "متى موعد تسليم مشروع Neptune في الرياض؟"],
+       ["دار جلوبال · عُمان", "ما هي مشاريع دار جلوبال في عُمان؟"],
+       ["وصلت · جدة", "ما هي أرخص فيلا للبيع في جدة؟"],
+       ["وصلت · الرياض", "كم متوسط سعر الشقق للبيع في الرياض؟"],
+       ["دار جلوبال · جدة", "كم عدد طوابق برج ترامب جدة؟"],
+       ["بالإنجليزية", "Which Dar Global project has interiors by Aston Martin?"]]
+};
+let lang = 'en', history = [];
+const $ = s => document.querySelector(s);
+const chat = $('#chat'), q = $('#q'), send = $('#send');
 const isAr = t => (t.match(/[؀-ۿ]/g)||[]).length >= ((t.match(/[A-Za-z]/g)||[]).length * 0.5) && /[؀-ۿ]/.test(t);
-const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 // Minimal, safe markdown for model answers: escape first, then **bold**, "- " lists, [n] citation chips.
 const md = s => esc(s.trim())
   .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
   .replace(/^\s*[-*•]\s+/gm, '• ')
-  .replace(/\[(\d+)\]/g, '<sup class="cite">$1</sup>')
+  .replace(/\[(\d+)\]/g, '<sup class="cite" role="button" tabindex="0" data-n="$1" aria-label="source $1">$1</sup>')
   .replace(/\n{3,}/g, '\n\n');
+const host = u => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return u; } };
+const ARROW = '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h9M8 3.5 12.5 8 8 12.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>';
 
+function setLang(l) {
+  lang = l; const t = T[l];
+  document.documentElement.lang = l; document.documentElement.dir = l === 'ar' ? 'rtl' : 'ltr';
+  document.querySelectorAll('[data-i18n]').forEach(e => e.textContent = t[e.dataset.i18n]);
+  document.querySelectorAll('[data-i18n-html]').forEach(e => e.innerHTML = t[e.dataset.i18nHtml]);
+  document.querySelectorAll('[data-i18n-ph]').forEach(e => e.placeholder = t[e.dataset.i18nPh]);
+  document.querySelectorAll('.lang button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.lang === l)));
+  $('.hero .ar').style.display = l === 'ar' ? 'none' : '';
+  renderCards();
+  try { localStorage.setItem('lang', l); } catch {}
+}
+function renderCards() {
+  $('#cards').innerHTML = EXAMPLES[lang].map(([k, text]) =>
+    `<button type="button" class="card"><span class="k">${esc(k)}</span><span class="q" dir="${isAr(text)?'rtl':'ltr'}">${esc(text)}</span><span class="go">${ARROW}</span></button>`).join('');
+  $('#cards').querySelectorAll('.card').forEach((b, i) => b.onclick = () => ask(EXAMPLES[lang][i][1]));
+}
 function add(role, html, cls='') {
   const d = document.createElement('div'); d.className = `msg ${role} ${cls}`;
   d.innerHTML = `<div class="bubble">${html}</div>`; chat.appendChild(d);
-  d.scrollIntoView({behavior:'smooth', block:'end'}); return d;
+  requestAnimationFrame(() => d.scrollIntoView({behavior:'smooth', block:'end'})); return d;
 }
 async function ask(text) {
   text = text.trim();
   if (text.length < 2 || send.disabled) return;
-  add('user', esc(text)).querySelector('.bubble').dir = isAr(text) ? 'rtl' : 'ltr';
-  q.value = ''; send.disabled = true;
-  const wait = add('bot', '<span class="typing"><span></span><span></span><span></span></span>');
+  document.body.classList.add('chatting');
+  const dir = isAr(text) ? 'rtl' : 'ltr', t = T[isAr(text) ? 'ar' : lang];
+  const u = add('user', esc(text)); u.querySelector('.bubble').dir = dir;
+  q.value = ''; autosize(); send.disabled = true;
+  const wait = add('bot', `<span class="typing"><span class="dots"><i></i><i></i><i></i></span>${t.searching}</span>`);
+  wait.querySelector('.bubble').dir = dir;
   try {
     const r = await fetch('/api/chat', {method:'POST', headers:{'Content-Type':'application/json'},
                                         body: JSON.stringify({question:text, history: history.slice(-4)})});
     const data = await r.json();
     wait.remove();
-    if (!r.ok) { add('bot', esc(typeof data.detail === 'string' ? data.detail : 'Please rephrase the question.'), 'idk'); return; }
-    let html = md(data.answer);
+    if (!r.ok) { add('bot', esc(typeof data.detail === 'string' ? data.detail : t.bad), 'idk'); return; }
+    const L = T[data.lang] || t;
+    let html = `<span class="who">${L.bot}</span>` + md(data.answer);
     if (data.sources.length) {
-      html += '<div class="sources">' + data.sources.map(s =>
-        `<div class="src" dir="ltr">[${s.n}] <a href="${esc(s.url)}" target="_blank" rel="noopener" title="${esc(s.snippet||'')}">${esc(s.title)}</a><span class="tag">${esc(s.source)}</span></div>`).join('') + '</div>';
+      html += '<div class="sources" aria-label="' + L.sources + '">' + data.sources.map(s =>
+        `<a class="src" data-n="${s.n}" href="${esc(s.url)}" target="_blank" rel="noopener" title="${esc(s.snippet||'')}">
+           <span class="tag"><span>${s.source === 'wasalt' ? 'Wasalt' : 'Dar Global'}</span><span>[${s.n}] ↗</span></span>
+           <span class="t" dir="auto">${esc(s.title)}</span><span class="host">${esc(host(s.url))}</span></a>`).join('') + '</div>';
     }
-    const meta = [data.model ? 'model: ' + esc(data.model) : '', data.cached ? 'cached answer' : `${data.latency_ms} ms`].filter(Boolean);
-    html += `<div class="meta" dir="ltr">${meta.join(' · ')}</div>`;
+    const meta = [data.cached ? L.cached : (data.latency_ms/1000).toFixed(1) + ' s', data.model ? esc(data.model.split('/').pop()) : ''].filter(Boolean);
+    html += `<div class="meta" dir="ltr"><span>${meta.join(' · ')}</span><button type="button" class="copy">${L.copy}</button></div>`;
     const m = add('bot', html, data.idk ? 'idk' : (data.degraded ? 'degraded' : ''));
     m.querySelector('.bubble').dir = data.lang === 'ar' ? 'rtl' : 'ltr';
+    m.querySelectorAll('sup.cite').forEach(c => {
+      const go = () => { const s = m.querySelector(`.src[data-n="${c.dataset.n}"]`); if (s) { s.classList.add('flash'); s.focus({preventScroll:true}); setTimeout(() => s.classList.remove('flash'), 1200); } };
+      c.onclick = go; c.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } };
+    });
+    m.querySelector('.copy').onclick = e => { navigator.clipboard?.writeText(data.answer); e.target.textContent = L.copied; };
     history.push({role:'user', content:text}, {role:'assistant', content:data.answer.replace(/\[\d+\]/g, '').slice(0, 600)});
-  } catch (e) { wait.remove(); add('bot', 'Network error (the free server may be waking up) - please retry.', 'idk'); }
+  } catch (e) { wait.remove(); add('bot', esc(t.err), 'idk'); }
   finally { send.disabled = false; q.focus(); }
 }
-document.getElementById('f').onsubmit = e => { e.preventDefault(); ask(q.value); };
-document.getElementById('reset').onclick = () => { history = []; chat.innerHTML = ''; q.focus(); };
+function autosize() { q.style.height = 'auto'; q.style.height = Math.min(q.scrollHeight, 160) + 'px'; }
+$('#f').onsubmit = e => { e.preventDefault(); ask(q.value); };
+$('#reset').onclick = () => { history = []; chat.innerHTML = ''; document.body.classList.remove('chatting'); window.scrollTo({top:0}); q.focus(); };
 q.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(q.value); } });
-q.addEventListener('input', () => { q.dir = isAr(q.value) ? 'rtl' : 'ltr'; });
-EXAMPLES.forEach(t => { const b = document.createElement('button'); b.type='button'; b.textContent = t; b.dir = isAr(t)?'rtl':'ltr'; b.onclick = () => ask(t); document.getElementById('examples').appendChild(b); });
+q.addEventListener('input', () => { q.dir = q.value ? (isAr(q.value) ? 'rtl' : 'ltr') : ''; autosize(); });
+document.querySelectorAll('.lang button').forEach(b => b.onclick = () => setLang(b.dataset.lang));
+let saved = null; try { saved = localStorage.getItem('lang'); } catch {}
+setLang(saved || ((navigator.language || '').startsWith('ar') ? 'ar' : 'en'));
 fetch('/api/health').then(r => r.json()).then(s => {
-  document.getElementById('stats').textContent =
-    `Index: ${s.docs} documents · ${s.chunks} chunks · Dar Global ${s.by_source.darglobal||0} / Wasalt ${s.by_source.wasalt||0} · scraped ${String(s.scraped_at).slice(0,10)} · embeddings ${s.embedder}`;
+  const bt = s.by_type || {};
+  if (bt.project) $('[data-count=projects]').textContent = bt.project;
+  if (bt.listing) $('[data-count=listings]').textContent = bt.listing;
+  $('#stats').textContent = `${s.docs} documents · ${s.chunks} chunks · ${String(s.scraped_at).slice(0,10)}`;
 }).catch(()=>{});
 </script>
 </body>
