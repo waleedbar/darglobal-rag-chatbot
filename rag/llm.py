@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 
 import httpx
 
@@ -94,9 +95,10 @@ class EchoLLM:
 
     def chat(self, system: str, user: str, history: list[dict] | None = None) -> tuple[str, str]:
         ctx, _, q = user.partition("QUESTION:")
-        qwords = {w for w in q.lower().split() if len(w) > 3}
+        words = lambda t: set(re.findall(r"\w{4,}", t.lower()))  # noqa: E731
+        qwords = words(q)
         for block in ctx.split("\n[")[1:]:
             n = block.split("]", 1)[0]
-            if qwords & set(block.lower().split()):
+            if qwords & words(block):
                 return f"According to the source, {block.split(chr(10), 2)[-1][:200].strip()} [{n}]", "echo"
         return "NOT_FOUND", "echo"
