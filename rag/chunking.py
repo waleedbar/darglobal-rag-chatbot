@@ -2,10 +2,11 @@
 so it stays meaningful on its own ("contextual chunk headers")."""
 from __future__ import annotations
 
+import os
 import re
 
-MAX_CHARS = 1000
-OVERLAP = 150
+MAX_CHARS = int(os.getenv("CHUNK_CHARS", "1000"))
+OVERLAP = int(os.getenv("CHUNK_OVERLAP", "150"))
 
 
 def _header(doc: dict) -> str:
@@ -36,10 +37,12 @@ def split_text(text: str, max_chars: int = MAX_CHARS, overlap: int = OVERLAP) ->
     return chunks
 
 
-def chunk_doc(doc: dict) -> list[dict]:
+def chunk_doc(doc: dict, max_chars: int | None = None, overlap: int | None = None) -> list[dict]:
     head = _header(doc)
     out = []
-    for i, body in enumerate(split_text(doc["text"])):
+    # Pre-computed statistics stay in one piece: the numbers only make sense together.
+    bodies = [doc["text"]] if doc.get("type") == "summary" else split_text(doc["text"], max_chars or MAX_CHARS, overlap or OVERLAP)
+    for i, body in enumerate(bodies):
         out.append({"chunk_id": f"{doc['id']}#{i}", "doc_id": doc["id"], "source": doc["source"],
                     "type": doc.get("type"), "title": doc["title"], "url": doc["url"],
                     "text": f"{head}\n{body}"})

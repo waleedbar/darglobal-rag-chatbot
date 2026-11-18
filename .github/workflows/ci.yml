@@ -44,5 +44,17 @@ jobs:
           curl -sf localhost:7860/ | grep -q "property assistant"
           docker stats --no-stream --format 'memory: {{.MemUsage}}' app
           test "$(docker inspect -f '{{.State.OOMKilled}}' app)" = "false"
-      - name: Retrieval quality (real embeddings, separate container so the capped app is unaffected)
-        run: docker run --rm dgrag python scripts/eval_retrieval.py
+      - name: Follow-up question + metrics endpoint
+        run: |
+          curl -sf -X POST localhost:7860/api/chat -H 'content-type: application/json' -d '{"question":"and its handover?","history":[{"role":"user","content":"Tell me about Neptune, Interiors by Mouawad"},{"role":"assistant","content":"Neptune is a villa project in Riyadh."}]}' \
+            | python -c "import sys,json; d=json.load(sys.stdin); print([s['url'] for s in d['sources']]); assert any('neptune' in s['url'] for s in d['sources'])"
+          curl -sf localhost:7860/api/metrics | python -m json.tool
+      - name: Retrieval evaluation + ablation (hybrid vs dense vs BM25, chunk sizes)
+        env:
+          DATA_KEY: ${{ secrets.DATA_KEY }}
+        run: |
+          pip install -q cryptography -r requirements-scraper.txt
+          python -m scraper.wasalt_import decrypt   # raw data only lives on this runner, never in an artifact
+          docker run --rm -v "$PWD/data/raw:/app/data/raw:ro" -v "$PWD/eval:/app/eval" dgrag \
+            python scripts/eval_retrieval.py --chunks 500,1000 --out eval/retrieval_results.md
+          cat eval/retrieval_results.md >> "$GITHUB_STEP_SUMMARY"

@@ -5,68 +5,89 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Dar Global &amp; Wasalt property assistant</title>
 <style>
-  :root { --ink:#1f2933; --muted:#64748b; --line:#e2e8f0; --brand:#0f3d3e; --accent:#b08d57; --bg:#f7f6f2; }
+  :root { --ink:#1f2933; --muted:#64748b; --line:#e2e8f0; --brand:#0f3d3e; --accent:#b08d57; --bg:#f7f6f2; --warn:#fffaf0; }
   * { box-sizing: border-box; }
-  body { margin:0; font:15px/1.55 system-ui, -apple-system, "Segoe UI", Tahoma, sans-serif; color:var(--ink); background:var(--bg); }
-  header { background:var(--brand); color:#fff; padding:18px 20px; }
+  body { margin:0; font:15px/1.6 system-ui, -apple-system, "Segoe UI", Tahoma, sans-serif; color:var(--ink); background:var(--bg); }
+  header { background:var(--brand); color:#fff; padding:16px 20px; }
+  .head { max-width:860px; margin:0 auto; display:flex; gap:12px; align-items:center; justify-content:space-between; }
   header h1 { margin:0; font-size:19px; font-weight:600; letter-spacing:.2px; }
-  header p { margin:4px 0 0; font-size:13px; opacity:.8; }
-  main { max-width:860px; margin:0 auto; padding:18px 16px 140px; }
-  .examples { display:flex; flex-wrap:wrap; gap:8px; margin:6px 0 18px; }
+  header p { margin:3px 0 0; font-size:13px; opacity:.8; }
+  header .links { display:flex; gap:8px; flex-shrink:0; }
+  header .links a, header .links button { color:#fff; border:1px solid rgba(255,255,255,.35); background:transparent; border-radius:8px;
+    padding:5px 10px; font:inherit; font-size:13px; text-decoration:none; cursor:pointer; }
+  header .links a:hover, header .links button:hover { background:rgba(255,255,255,.1); }
+  main { max-width:860px; margin:0 auto; padding:16px 16px 150px; }
+  .hint { color:var(--muted); font-size:13px; margin:6px 0 4px; }
+  .examples { display:flex; flex-wrap:wrap; gap:8px; margin:6px 0 16px; }
   .examples button { border:1px solid var(--line); background:#fff; border-radius:999px; padding:6px 12px; font-size:13px; cursor:pointer; color:var(--ink); }
   .examples button:hover { border-color:var(--accent); }
   .msg { margin:14px 0; display:flex; }
   .msg.user { justify-content:flex-end; }
-  .bubble { max-width:85%; padding:12px 14px; border-radius:14px; background:#fff; border:1px solid var(--line); white-space:pre-wrap; }
+  .bubble { max-width:85%; padding:12px 14px; border-radius:14px; background:#fff; border:1px solid var(--line); white-space:pre-wrap; overflow-wrap:anywhere; }
   .user .bubble { background:var(--brand); color:#fff; border-color:var(--brand); }
   .cite { font-size:.72em; background:#e8efee; color:var(--brand); border-radius:6px; padding:0 4px; margin:0 1px; }
-  .idk .bubble { border-color:#f1c27d; background:#fffaf0; }
+  .idk .bubble, .degraded .bubble { border-color:#f1c27d; background:var(--warn); }
   .sources { margin-top:10px; border-top:1px solid var(--line); padding-top:8px; font-size:13px; white-space:normal; }
   .sources a { color:var(--brand); font-weight:600; text-decoration:none; }
   .sources a:hover { text-decoration:underline; }
   .sources .src { margin:4px 0; }
   .tag { font-size:11px; border-radius:6px; padding:1px 6px; margin-inline-start:6px; background:#eef2f2; color:var(--muted); }
   .meta { color:var(--muted); font-size:12px; margin-top:6px; }
+  .typing span { display:inline-block; width:6px; height:6px; margin:0 2px; border-radius:50%; background:var(--muted); animation:b 1s infinite; }
+  .typing span:nth-child(2) { animation-delay:.15s } .typing span:nth-child(3) { animation-delay:.3s }
+  @keyframes b { 0%,80%,100% { opacity:.25 } 40% { opacity:1 } }
   form { position:fixed; bottom:0; left:0; right:0; background:linear-gradient(transparent, var(--bg) 30%); padding:18px 16px; }
   .bar { max-width:860px; margin:0 auto; display:flex; gap:8px; }
   textarea { flex:1; resize:none; height:52px; padding:14px; border-radius:12px; border:1px solid var(--line); font:inherit; }
+  textarea:focus { outline:2px solid var(--accent); outline-offset:-1px; }
   button.send { background:var(--accent); color:#fff; border:0; border-radius:12px; padding:0 20px; font-weight:600; cursor:pointer; }
   button.send:disabled { opacity:.5; }
   [dir=rtl] { text-align:right; }
   footer { color:var(--muted); font-size:12px; text-align:center; margin-top:24px; }
+  @media (max-width:600px) { header p { display:none } .bubble { max-width:95% } }
 </style>
 </head>
 <body>
 <header>
-  <h1>Dar Global &amp; Wasalt property assistant · المساعد العقاري</h1>
-  <p>Answers only from public pages of darglobal.co.uk and wasalt.sa, with links to the source. Ask in English or Arabic.</p>
+  <div class="head">
+    <div>
+      <h1>Dar Global &amp; Wasalt property assistant · المساعد العقاري</h1>
+      <p>Answers only from public pages of darglobal.co.uk and wasalt.sa, with links to the source. Ask in English or Arabic.</p>
+    </div>
+    <div class="links">
+      <button type="button" id="reset" title="Start a new conversation">New chat</button>
+      <a href="https://github.com/waleedbar/darglobal-rag-chatbot" target="_blank" rel="noopener">How it works</a>
+    </div>
+  </div>
 </header>
 <main>
+  <div class="hint">Try one, then ask a follow-up such as “and when is its handover?” · جرّب سؤالاً ثم اسأل سؤال متابعة</div>
   <div class="examples" id="examples"></div>
-  <div id="chat"></div>
+  <div id="chat" aria-live="polite"></div>
   <footer id="stats"></footer>
 </main>
 <form id="f">
   <div class="bar">
-    <textarea id="q" placeholder="Ask about a project, a city, prices, amenities…  اسأل عن مشروع أو مدينة أو الأسعار" required></textarea>
+    <textarea id="q" maxlength="1000" placeholder="Ask about a project, a city, prices, amenities…  اسأل عن مشروع أو مدينة أو الأسعار" required></textarea>
     <button class="send" id="send">Ask</button>
   </div>
 </form>
 <script>
 const EXAMPLES = [
   "Which Dar Global projects are in Saudi Arabia?",
-  "When is the handover of Neptune, Interiors by Mouawad?",
-  "What amenities are near the Neptune villas?",
+  "Tell me about Neptune, Interiors by Mouawad",
   "What is the cheapest villa for sale in Jeddah on Wasalt?",
+  "How much does a 3-bedroom apartment cost in Jeddah?",
   "ما هي مشاريع دار جلوبال في عُمان؟",
   "كم متوسط سعر الشقق للبيع في الرياض؟",
   "What is the price of a Trump Tower Jeddah apartment?",
   "Does Dar Global have projects in Japan?"
 ];
 const chat = document.getElementById('chat'), q = document.getElementById('q'), send = document.getElementById('send');
+let history = [];  // recent turns sent to the API so follow-up questions work
 const isAr = t => (t.match(/[؀-ۿ]/g)||[]).length >= ((t.match(/[A-Za-z]/g)||[]).length * 0.5) && /[؀-ۿ]/.test(t);
 const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-// Minimal, safe markdown for model answers: escape first, then **bold**, "- " / "1. " lists, [n] citation chips.
+// Minimal, safe markdown for model answers: escape first, then **bold**, "- " lists, [n] citation chips.
 const md = s => esc(s.trim())
   .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
   .replace(/^\s*[-*•]\s+/gm, '• ')
@@ -79,27 +100,32 @@ function add(role, html, cls='') {
   d.scrollIntoView({behavior:'smooth', block:'end'}); return d;
 }
 async function ask(text) {
-  if (!text.trim()) return;
+  text = text.trim();
+  if (text.length < 2 || send.disabled) return;
   add('user', esc(text)).querySelector('.bubble').dir = isAr(text) ? 'rtl' : 'ltr';
   q.value = ''; send.disabled = true;
-  const wait = add('bot', isAr(text) ? '…جارٍ البحث في المصادر' : 'Searching the sources…');
+  const wait = add('bot', '<span class="typing"><span></span><span></span><span></span></span>');
   try {
-    const r = await fetch('/api/chat', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({question:text})});
+    const r = await fetch('/api/chat', {method:'POST', headers:{'Content-Type':'application/json'},
+                                        body: JSON.stringify({question:text, history: history.slice(-4)})});
     const data = await r.json();
     wait.remove();
-    if (!r.ok) { add('bot', esc(data.detail || 'Error'), 'idk'); return; }
+    if (!r.ok) { add('bot', esc(typeof data.detail === 'string' ? data.detail : 'Please rephrase the question.'), 'idk'); return; }
     let html = md(data.answer);
     if (data.sources.length) {
       html += '<div class="sources">' + data.sources.map(s =>
-        `<div class="src" dir="ltr">[${s.n}] <a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a><span class="tag">${s.source}</span></div>`).join('') + '</div>';
+        `<div class="src" dir="ltr">[${s.n}] <a href="${esc(s.url)}" target="_blank" rel="noopener" title="${esc(s.snippet||'')}">${esc(s.title)}</a><span class="tag">${esc(s.source)}</span></div>`).join('') + '</div>';
     }
-    html += `<div class="meta" dir="ltr">${data.model ? 'model: ' + esc(data.model) + ' · ' : ''}${data.latency_ms} ms</div>`;
-    const m = add('bot', html, data.idk ? 'idk' : '');
+    const meta = [data.model ? 'model: ' + esc(data.model) : '', data.cached ? 'cached answer' : `${data.latency_ms} ms`].filter(Boolean);
+    html += `<div class="meta" dir="ltr">${meta.join(' · ')}</div>`;
+    const m = add('bot', html, data.idk ? 'idk' : (data.degraded ? 'degraded' : ''));
     m.querySelector('.bubble').dir = data.lang === 'ar' ? 'rtl' : 'ltr';
-  } catch (e) { wait.remove(); add('bot', 'Network error, please retry.', 'idk'); }
+    history.push({role:'user', content:text}, {role:'assistant', content:data.answer.replace(/\[\d+\]/g, '').slice(0, 600)});
+  } catch (e) { wait.remove(); add('bot', 'Network error (the free server may be waking up) - please retry.', 'idk'); }
   finally { send.disabled = false; q.focus(); }
 }
 document.getElementById('f').onsubmit = e => { e.preventDefault(); ask(q.value); };
+document.getElementById('reset').onclick = () => { history = []; chat.innerHTML = ''; q.focus(); };
 q.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(q.value); } });
 q.addEventListener('input', () => { q.dir = isAr(q.value) ? 'rtl' : 'ltr'; });
 EXAMPLES.forEach(t => { const b = document.createElement('button'); b.type='button'; b.textContent = t; b.dir = isAr(t)?'rtl':'ltr'; b.onclick = () => ask(t); document.getElementById('examples').appendChild(b); });

@@ -8,8 +8,8 @@ import pytest
 
 from rag.chunking import split_text
 from rag.embeddings import HashEmbedder
-from rag.llm import EchoLLM, LLMError
-from rag.pipeline import IDK, UNAVAILABLE, answer
+from rag.llm import EchoLLM, LLMError, QuotaExceeded
+from rag.pipeline import CACHE, IDK, answer, retrieval_query
 from rag.store import Store, build
 from rag.summaries import build_summaries
 from rag.text import detect_lang, tokenize
@@ -46,11 +46,19 @@ class FakeLLM:
     configured = True
 
     def __init__(self, reply):
-        self.reply, self.last_user = reply, ""
+        self.reply, self.last_user, self.calls, self.history = reply, "", 0, None
 
-    def chat(self, system, user):
-        self.last_user = user
+    def chat(self, system, user, history=None):
+        self.last_user, self.history = user, history
+        self.calls += 1
         return self.reply, "fake/model:free"
+
+
+@pytest.fixture(autouse=True)
+def _fresh_cache():
+    CACHE.data.clear()
+    yield
+    CACHE.data.clear()
 
 
 def test_language_detection_and_arabic_tokens():
@@ -93,14 +101,41 @@ def test_not_found_becomes_i_dont_know_in_the_users_language(store):
     assert res["idk"] and res["answer"] == IDK["ar"] and res["sources"] == []
 
 
-def test_llm_outage_is_reported_not_hallucinated(store):
-    class Down:
-        configured = True
+class Down:
+    configured = True
 
-        def chat(self, s, u):
-            raise LLMError("all free models rate-limited")
-    res = answer("Neptune handover?", store, Down())
-    assert res["answer"] == UNAVAILABLE["en"] and res.get("error")
+    def __init__(self, exc):
+        self.exc = exc
+
+    def chat(self, s, u, history=None):
+        raise self.exc
+
+
+def test_llm_outage_degrades_to_sources_not_hallucination(store):
+    res = answer("Neptune handover?", store, Down(LLMError("all free models rate-limited")))
+    assert res["degraded"] and "temporary outage" in res["answer"] and res["sources"]
+    assert "neptune" in res["sources"][0]["url"]
+    ar = answer("متى تسليم Neptune؟", store, Down(QuotaExceeded("free-models-per-day")))
+    assert ar["degraded"] and "الحد اليومي" in ar["answer"]
+
+
+def test_follow_up_questions_reuse_the_previous_question(store):
+    hist = [{"role": "user", "content": "Tell me about Neptune, Interiors by Mouawad"},
+            {"role": "assistant", "content": "Neptune is a villa project in Riyadh [1]."}]
+    assert retrieval_query("When is its handover?", hist).startswith("Tell me about Neptune")
+    assert retrieval_query("وكم سعرها؟", hist).startswith("Tell me about Neptune")
+    assert retrieval_query("Which villas are in Cortesin, Spain on the beach?", hist).startswith("Which villas")
+    llm = FakeLLM("December 2027 [1].")
+    res = answer("When is its handover?", store, llm, k=3, history=hist)
+    assert "neptune" in res["sources"][0]["url"] and llm.history[-1]["role"] == "assistant"
+
+
+def test_repeated_questions_are_served_from_cache(store):
+    llm = FakeLLM("December 2027 [1].")
+    first = answer("When is the handover of Neptune?", store, llm, k=3)
+    again = answer("  when is the HANDOVER of neptune? ", store, llm, k=3)
+    assert llm.calls == 1 and again["cached"] and again["answer"] == first["answer"]
+    answer("When is the handover of Neptune?", store, Down(LLMError("x")), k=3)  # cached answer survives outages
 
 
 def test_echo_llm_end_to_end(store):
@@ -116,6 +151,11 @@ def test_api(store, monkeypatch):
     c = TestClient(main.app)
     r = c.post("/api/chat", json={"question": "Neptune handover?"})
     assert r.status_code == 200 and r.json()["answer"] == "December 2027 [1]."
+    r = c.post("/api/chat", json={"question": "and its size?", "history": [
+        {"role": "user", "content": "Neptune handover?"}, {"role": "assistant", "content": "December 2027 [1]."}]})
+    assert r.status_code == 200
+    bad = c.post("/api/chat", json={"question": "hi there", "history": [{"role": "system", "content": "x"}]})
+    assert bad.status_code == 422
     assert c.get("/").status_code == 200 and c.get("/api/health").json()["ok"]
     assert c.post("/api/chat", json={"question": ""}).status_code == 422
     for _ in range(int(os.getenv("RATE_LIMIT_PER_MIN", "12"))):

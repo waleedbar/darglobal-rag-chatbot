@@ -24,6 +24,10 @@ class LLMError(RuntimeError):
     pass
 
 
+class QuotaExceeded(LLMError):
+    """OpenRouter's daily cap for free models is account-wide: trying other free models cannot help."""
+
+
 class OpenRouterLLM:
     def __init__(self, models: str = DEFAULT_MODELS, api_key: str | None = None, timeout: float = 60,
                  discover: bool = True):
@@ -53,10 +57,11 @@ class OpenRouterLLM:
     def configured(self) -> bool:
         return bool(self.api_key)
 
-    def chat(self, system: str, user: str) -> tuple[str, str]:
+    def chat(self, system: str, user: str, history: list[dict] | None = None) -> tuple[str, str]:
         """Return (text, model_used). Tries each free model in order on rate limits / outages."""
         if not self.api_key:
             raise LLMError("OPENROUTER_API_KEY is not set")
+        messages = [{"role": "system", "content": system}, *(history or []), {"role": "user", "content": user}]
         last = ""
         for model in self.models:
             try:
@@ -65,13 +70,15 @@ class OpenRouterLLM:
                     "HTTP-Referer": os.getenv("PUBLIC_URL", "https://github.com/waleedbar/darglobal-rag-chatbot"),
                     "X-Title": "DarGlobal RAG chatbot"},
                     json={"model": model, "temperature": 0.1, "max_tokens": 700,
-                          "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}]})
+                          "messages": messages})
                 if r.status_code == 200:
                     data = r.json()
                     text = (data.get("choices") or [{}])[0].get("message", {}).get("content") or ""
                     if text.strip():
                         return text.strip(), model
                     last = f"{model}: empty response"
+                elif r.status_code == 429 and "per-day" in r.text:
+                    raise QuotaExceeded(f"daily free-model quota reached ({r.text[:160]})")
                 else:
                     last = f"{model}: HTTP {r.status_code} {r.text[:200]}"
             except httpx.HTTPError as e:
@@ -85,7 +92,7 @@ class EchoLLM:
 
     configured = True
 
-    def chat(self, system: str, user: str) -> tuple[str, str]:
+    def chat(self, system: str, user: str, history: list[dict] | None = None) -> tuple[str, str]:
         ctx, _, q = user.partition("QUESTION:")
         qwords = {w for w in q.lower().split() if len(w) > 3}
         for block in ctx.split("\n[")[1:]:

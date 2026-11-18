@@ -4,8 +4,9 @@ from __future__ import annotations
 import logging
 import os
 import time
-from collections import defaultdict, deque
+from collections import Counter, defaultdict, deque
 from pathlib import Path
+from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse
@@ -27,8 +28,20 @@ llm = EchoLLM() if os.getenv("LLM_BACKEND") == "echo" else OpenRouterLLM()
 _hits: dict[str, deque] = defaultdict(deque)
 
 
+class Turn(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(max_length=4000)
+
+
 class Ask(BaseModel):
     question: str = Field(min_length=2, max_length=1000)
+    history: list[Turn] = Field(default_factory=list, max_length=12)  # recent turns, for follow-up questions
+
+
+# Lightweight in-process metrics (reset on restart), exposed at /api/metrics.
+METRICS: Counter = Counter()
+LATENCIES: deque = deque(maxlen=500)
+STARTED = time.time()
 
 
 def _rate_limit(ip: str) -> None:
@@ -45,8 +58,12 @@ def chat(body: Ask, request: Request):
     ip = (request.headers.get("x-forwarded-for") or request.client.host or "?").split(",")[0].strip()
     _rate_limit(ip)
     t0 = time.perf_counter()
-    res = answer(body.question, store, llm)
+    res = answer(body.question, store, llm, history=[t.model_dump() for t in body.history])
     res["latency_ms"] = int((time.perf_counter() - t0) * 1000)
+    METRICS.update(questions=1, idk=res["idk"], cached=bool(res.get("cached")), degraded=bool(res.get("degraded")),
+                   follow_ups=bool(body.history), **{f"lang_{res['lang']}": 1})
+    if not res.get("cached"):
+        LATENCIES.append(res["latency_ms"])
     log.info("q=%r lang=%s idk=%s model=%s sources=%d %dms", body.question[:80], res["lang"], res["idk"],
              res.get("model"), len(res["sources"]), res["latency_ms"])
     return res
@@ -55,6 +72,14 @@ def chat(body: Ask, request: Request):
 @app.get("/api/health")
 def health():
     return {"ok": True, "llm_configured": llm.configured, **store.stats}
+
+
+@app.get("/api/metrics")
+def metrics():
+    lat = sorted(LATENCIES)
+    pct = (lambda p: lat[min(len(lat) - 1, int(p * len(lat)))] if lat else None)
+    return {"uptime_s": int(time.time() - STARTED), **METRICS,
+            "latency_ms": {"p50": pct(0.5), "p90": pct(0.9), "n": len(lat)}, "models": getattr(llm, "models", [])}
 
 
 @app.get("/")

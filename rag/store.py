@@ -30,10 +30,10 @@ def load_docs(raw_dir: Path = RAW) -> list[dict]:
     return docs
 
 
-def build(embedder, raw_dir: Path = RAW, out: Path = INDEX_DIR) -> dict:
+def build(embedder, raw_dir: Path = RAW, out: Path = INDEX_DIR, chunk_chars: int | None = None) -> dict:
     docs = load_docs(raw_dir)
     docs += build_summaries(docs)
-    chunks = [c for d in docs for c in chunk_doc(d)]
+    chunks = [c for d in docs for c in chunk_doc(d, chunk_chars, (chunk_chars or 0) // 6 or None)]
     if not chunks:
         raise SystemExit(f"no documents found in {raw_dir}")
     log.info("embedding %d chunks from %d docs with %s", len(chunks), len(docs), embedder.name)
@@ -58,9 +58,10 @@ class Store:
         self.bm25 = BM25Okapi([tokenize(c["text"]) for c in self.chunks])
         self.stats = json.loads((index_dir / "stats.json").read_text())
 
-    def search(self, query: str, k: int = 6, pool: int = 30) -> list[dict]:
+    def search(self, query: str, k: int = 6, pool: int = 30, mode: str = "hybrid") -> list[dict]:
         """Hybrid search. Returns chunks with `score` (cosine of best dense match) and `rrf`.
-        At most 2 chunks per page, so one long page cannot crowd out other relevant sources."""
+        At most 2 chunks per page, so one long page cannot crowd out other relevant sources.
+        `mode` = "dense" or "bm25" switches one retriever off (used by the ablation in scripts/eval_retrieval.py)."""
         query = expand_query(query)
         qv = self.embedder.embed_query(query)
         sims, ids = self.index.search(qv, min(pool, len(self.chunks)))
@@ -70,7 +71,8 @@ class Store:
         top_bm = np.argsort(-bm)[:pool]
         bm_rank = {int(i): r for r, i in enumerate(top_bm) if bm[i] > 0}
         fused: dict[int, float] = {}
-        for ranks in (dense_rank, bm_rank):
+        rankings = {"hybrid": (dense_rank, bm_rank), "dense": (dense_rank,), "bm25": (bm_rank,)}[mode]
+        for ranks in rankings:
             for i, r in ranks.items():
                 fused[i] = fused.get(i, 0.0) + 1.0 / (60 + r)
         best, per_url = [], {}
