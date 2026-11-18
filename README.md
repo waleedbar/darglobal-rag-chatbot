@@ -123,6 +123,7 @@ smoke-tests the API in English and Arabic, and prints a retrieval report (`scrip
 * **Snapshot, not live data.** Scraped on 18 Nov 2026; prices and availability change — answers link to the live page.
 * **Wasalt is a sample** (≈240 listings from 8 category pages), not the whole market; summaries say so. Wasalt
   *project* pages are client-rendered behind `/search` (disallowed), so Wasalt projects/developers are not covered.
+* **Wasalt rents don't state the period** (monthly/yearly) in the listing data, so the bot reports them "as listed".
 * **Dar Global rarely publishes unit prices**; the bot says the price isn't in the data instead of guessing.
 * **Free hosting** sleeps after ~15 min idle (first request ~50 s). **Free models** are rate-limited and sometimes slow; the app falls back across several free models and reports
   a temporary outage rather than inventing an answer.
