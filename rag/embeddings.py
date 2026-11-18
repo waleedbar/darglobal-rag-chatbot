@@ -32,6 +32,49 @@ def _l2(x: np.ndarray) -> np.ndarray:
     return x / np.clip(np.linalg.norm(x, axis=1, keepdims=True), 1e-12, None)
 
 
+class HFTokenizer:
+    """Hugging Face `tokenizers` (exact, but parsing XLM-R's 250k-entry tokenizer.json costs ~280 MB)."""
+
+    def __init__(self, path: str, max_tokens: int):
+        from tokenizers import Tokenizer
+
+        self.tok = Tokenizer.from_file(path)
+        self.tok.enable_truncation(max_tokens)
+        pad = self.tok.token_to_id("<pad>")
+        self.tok.enable_padding(pad_id=1 if pad is None else pad, pad_token="<pad>")
+
+    def batch(self, texts: list[str]) -> tuple[np.ndarray, np.ndarray]:
+        enc = self.tok.encode_batch(texts)
+        return (np.array([e.ids for e in enc], dtype="int64"),
+                np.array([e.attention_mask for e in enc], dtype="int64"))
+
+
+class SentencePieceXLMR:
+    """The same XLM-R tokenization straight from the SentencePiece model (fairseq id layout)."""
+
+    BOS, PAD, EOS, UNK = 0, 1, 2, 3
+
+    def __init__(self, path: str, max_tokens: int):
+        import sentencepiece as spm
+
+        self.sp = spm.SentencePieceProcessor(model_file=path)
+        self.max = max_tokens
+
+    def ids(self, text: str) -> list[int]:
+        body = [self.UNK if i == 0 else i + 1 for i in self.sp.encode(text)][: self.max - 2]
+        return [self.BOS, *body, self.EOS]
+
+    def batch(self, texts: list[str]) -> tuple[np.ndarray, np.ndarray]:
+        rows = [self.ids(t) for t in texts]
+        width = max(map(len, rows))
+        ids = np.full((len(rows), width), self.PAD, dtype="int64")
+        mask = np.zeros((len(rows), width), dtype="int64")
+        for r, row in enumerate(rows):
+            ids[r, : len(row)] = row
+            mask[r, : len(row)] = 1
+        return ids, mask
+
+
 class FastEmbedEmbedder:
     """Multilingual sentence embeddings with onnxruntime.
 
@@ -56,8 +99,6 @@ class FastEmbedEmbedder:
         if found is None:
             raise RuntimeError(f"embedding model {model} not found in {cache}")
         import onnxruntime as ort
-        from tokenizers import Tokenizer
-
         so = ort.SessionOptions()
         so.graph_optimization_level = ort.GraphOptimizationLevel.ORT_DISABLE_ALL
         so.enable_cpu_mem_arena = False
@@ -69,11 +110,12 @@ class FastEmbedEmbedder:
             so.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
             self.session = ort.InferenceSession(str(found), so, providers=["CPUExecutionProvider"])
         self.inputs = {i.name for i in self.session.get_inputs()}
-        self.tok = Tokenizer.from_file(str(found.parent / "tokenizer.json"))
-        self.tok.enable_truncation(self.MAX_TOKENS)
-        pad = self.tok.token_to_id("<pad>")
-        self.tok.enable_padding(pad_id=1 if pad is None else pad, pad_token="<pad>")
-        _trim_heap()  # parsing the 250k-entry tokenizer.json leaves ~200 MB of freed-but-held heap
+        sp_file = found.parent / "sentencepiece.bpe.model"
+        if sp_file.exists():  # verified at build time to give identical ids; ~250 MB less RAM
+            self.tok = SentencePieceXLMR(str(sp_file), self.MAX_TOKENS)
+        else:
+            self.tok = HFTokenizer(str(found.parent / "tokenizer.json"), self.MAX_TOKENS)
+        _trim_heap()
 
     def _find(self, cache: Path) -> Path | None:
         key = self.name.split("/")[-1].lower()
@@ -84,9 +126,7 @@ class FastEmbedEmbedder:
     def _embed(self, texts: list[str], batch: int = 16) -> np.ndarray:
         out = []
         for i in range(0, len(texts), batch):
-            enc = self.tok.encode_batch(texts[i:i + batch])
-            ids = np.array([e.ids for e in enc], dtype="int64")
-            mask = np.array([e.attention_mask for e in enc], dtype="int64")
+            ids, mask = self.tok.batch(texts[i:i + batch])
             feed = {"input_ids": ids, "attention_mask": mask}
             if "token_type_ids" in self.inputs:
                 feed["token_type_ids"] = np.zeros_like(ids)

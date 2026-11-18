@@ -9,3 +9,4 @@ fastembed==0.9.*
 beautifulsoup4>=4.12
 lxml>=5.0
 cryptography>=43
+sentencepiece>=0.2,<0.3

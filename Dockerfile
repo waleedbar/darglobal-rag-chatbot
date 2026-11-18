@@ -24,7 +24,8 @@ COPY --chown=user . .
 # then quantize it to int8 so the whole service fits in 512 MB of RAM.
 RUN if [ "$EMBED_BACKEND" != "hash" ]; then \
       python -c "import os; from fastembed import TextEmbedding; TextEmbedding(os.environ['EMBED_MODEL'], cache_dir=os.environ['MODEL_CACHE'], lazy_load=True)" && \
-      pip install "onnx>=1.17" && python scripts/quantize_model.py && pip uninstall -y onnx; fi
+      pip install "onnx>=1.17" && python scripts/quantize_model.py && pip uninstall -y onnx && \
+      python scripts/prepare_tokenizer.py; fi
 
 # Decrypt the Wasalt snapshot if the DATA_KEY build secret is provided (not redistributed in plain form),
 # then embed every chunk and write the FAISS + BM25 index.
