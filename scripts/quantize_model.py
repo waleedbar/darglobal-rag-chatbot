@@ -5,8 +5,8 @@ so the resident size more than doubles. Here we:
   1. convert every float16 tensor / type in the graph to float32,
   2. store the 250k-token vocabulary table as row-wise int8 (the bulk of the weights),
   3. sanity-check the result against the float32 graph (cosine similarity of sentence embeddings).
-The int8 model is used for both the index and queries, so vectors stay consistent. If any step fails
-the original file is left untouched.
+The int8 model is used for both the index and queries, so vectors stay consistent. The result is written as model_int8.onnx
+(+ external weight file) next to the original; if any step fails the original is used.
 """
 from __future__ import annotations
 
@@ -130,7 +130,14 @@ def main() -> int:
                   f"min cosine vs float32 = {cos:.4f}")
             if cos < 0.95:
                 raise ValueError("quantized embeddings drifted too far")
-            q8.replace(real)
+            # Weights go to an external file next to the graph: onnxruntime memory-maps it instead of
+            # holding both the protobuf bytes and a tensor copy in RAM.
+            import onnx
+
+            final = path.parent / "model_int8.onnx"
+            onnx.save(onnx.load(str(q8)), str(final), save_as_external_data=True,
+                      all_tensors_to_one_file=True, location="model_int8.onnx.data", size_threshold=1024)
+            print(f"quantize: wrote {final} (+ external weights)")
         except Exception as exc:
             print(f"quantize: kept original model for {path.name} ({type(exc).__name__}: {exc})")
         finally:

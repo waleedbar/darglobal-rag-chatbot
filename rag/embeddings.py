@@ -18,6 +18,16 @@ from .text import normalize, tokenize
 DEFAULT_MODEL = os.getenv("EMBED_MODEL", "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
 
 
+def _trim_heap() -> None:
+    """Give memory freed while loading the model back to the OS (glibc keeps it otherwise)."""
+    try:
+        import ctypes
+
+        ctypes.CDLL("libc.so.6").malloc_trim(0)
+    except Exception:
+        pass
+
+
 def _l2(x: np.ndarray) -> np.ndarray:
     return x / np.clip(np.linalg.norm(x, axis=1, keepdims=True), 1e-12, None)
 
@@ -59,6 +69,7 @@ class FastEmbedEmbedder:
             so.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
             self.session = ort.InferenceSession(str(found), so, providers=["CPUExecutionProvider"])
         self.inputs = {i.name for i in self.session.get_inputs()}
+        _trim_heap()
         self.tok = Tokenizer.from_file(str(found.parent / "tokenizer.json"))
         self.tok.enable_truncation(self.MAX_TOKENS)
         pad = self.tok.token_to_id("<pad>")
@@ -67,7 +78,8 @@ class FastEmbedEmbedder:
     def _find(self, cache: Path) -> Path | None:
         key = self.name.split("/")[-1].lower()
         hits = [p for p in cache.rglob("*.onnx") if key in str(p).lower() and (p.parent / "tokenizer.json").exists()]
-        return sorted(hits)[0] if hits else None
+        hits.sort(key=lambda p: (p.name != "model_int8.onnx", str(p)))  # prefer the build-time int8 model
+        return hits[0] if hits else None
 
     def _embed(self, texts: list[str], batch: int = 16) -> np.ndarray:
         out = []
