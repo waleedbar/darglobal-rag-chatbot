@@ -19,6 +19,7 @@
   .msg.user { justify-content:flex-end; }
   .bubble { max-width:85%; padding:12px 14px; border-radius:14px; background:#fff; border:1px solid var(--line); white-space:pre-wrap; }
   .user .bubble { background:var(--brand); color:#fff; border-color:var(--brand); }
+  .cite { font-size:.72em; background:#e8efee; color:var(--brand); border-radius:6px; padding:0 4px; margin:0 1px; }
   .idk .bubble { border-color:#f1c27d; background:#fffaf0; }
   .sources { margin-top:10px; border-top:1px solid var(--line); padding-top:8px; font-size:13px; white-space:normal; }
   .sources a { color:var(--brand); font-weight:600; text-decoration:none; }
@@ -65,6 +66,12 @@ const EXAMPLES = [
 const chat = document.getElementById('chat'), q = document.getElementById('q'), send = document.getElementById('send');
 const isAr = t => (t.match(/[؀-ۿ]/g)||[]).length >= ((t.match(/[A-Za-z]/g)||[]).length * 0.5) && /[؀-ۿ]/.test(t);
 const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+// Minimal, safe markdown for model answers: escape first, then **bold**, "- " / "1. " lists, [n] citation chips.
+const md = s => esc(s.trim())
+  .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+  .replace(/^\s*[-*•]\s+/gm, '• ')
+  .replace(/\[(\d+)\]/g, '<sup class="cite">$1</sup>')
+  .replace(/\n{3,}/g, '\n\n');
 
 function add(role, html, cls='') {
   const d = document.createElement('div'); d.className = `msg ${role} ${cls}`;
@@ -81,7 +88,7 @@ async function ask(text) {
     const data = await r.json();
     wait.remove();
     if (!r.ok) { add('bot', esc(data.detail || 'Error'), 'idk'); return; }
-    let html = esc(data.answer);
+    let html = md(data.answer);
     if (data.sources.length) {
       html += '<div class="sources">' + data.sources.map(s =>
         `<div class="src" dir="ltr">[${s.n}] <a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a><span class="tag">${s.source}</span></div>`).join('') + '</div>';
