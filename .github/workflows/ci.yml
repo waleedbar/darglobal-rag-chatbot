@@ -42,5 +42,5 @@ jobs:
           curl -sf localhost:7860/ | grep -q "property assistant"
           docker stats --no-stream --format 'memory: {{.MemUsage}}' app
           test "$(docker inspect -f '{{.State.OOMKilled}}' app)" = "false"
-      - name: Retrieval quality (real embeddings)
-        run: docker exec app python scripts/eval_retrieval.py
+      - name: Retrieval quality (real embeddings, separate container so the capped app is unaffected)
+        run: docker run --rm dgrag python scripts/eval_retrieval.py

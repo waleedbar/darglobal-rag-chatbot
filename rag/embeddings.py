@@ -1,6 +1,6 @@
 """Embedding backends.
 
-* FastEmbedEmbedder - production: paraphrase-multilingual-MiniLM-L12-v2 (ONNX, CPU, ~220 MB, 50+ languages
+* FastEmbedEmbedder - production: paraphrase-multilingual-MiniLM-L12-v2 (ONNX, quantized to int8 at build time, 50+ languages
   incl. Arabic) so the container fits a 512 MB free instance; set EMBED_MODEL=intfloat/multilingual-e5-large
   for higher recall when more RAM is available (both run locally: no API quota is spent on embeddings).
 * HashEmbedder - deterministic offline fallback used in unit tests (no model download).
@@ -26,7 +26,9 @@ class FastEmbedEmbedder:
         from fastembed import TextEmbedding  # imported lazily: heavy
 
         self.name = model
-        self.model = TextEmbedding(model_name=model, cache_dir=cache_dir or os.getenv("MODEL_CACHE", "models"))
+        # No onnxruntime CPU arena + 2 threads: keeps resident memory low on a 512 MB instance.
+        self.model = TextEmbedding(model_name=model, cache_dir=cache_dir or os.getenv("MODEL_CACHE", "models"),
+                                   threads=int(os.getenv("EMBED_THREADS", "2")), enable_cpu_mem_arena=False)
         self.e5 = "e5" in model.lower()
 
     def embed_passages(self, texts: list[str]) -> np.ndarray:
