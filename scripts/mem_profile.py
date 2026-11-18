@@ -20,8 +20,6 @@ import fastapi, httpx  # noqa
 stage("fastapi+httpx")
 import onnxruntime, tokenizers  # noqa
 stage("onnxruntime+tokenizers")
-import fastembed  # noqa
-stage("fastembed import")
 from rag.embeddings import get_embedder
 emb = get_embedder()
 stage("embedder loaded")
