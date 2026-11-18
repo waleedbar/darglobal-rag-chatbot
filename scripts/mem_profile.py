@@ -2,14 +2,14 @@
 import os, sys
 sys.path.insert(0, os.getcwd())
 
-def rss():
+def rss(key="VmRSS"):
     for line in open("/proc/self/status"):
-        if line.startswith("VmRSS"):
+        if line.startswith(key):
             return int(line.split()[1]) // 1024
     return -1
 
 def stage(name):
-    print(f"{rss():5d} MB  after {name}", flush=True)
+    print(f"{rss():5d} MB  after {name}  (anon {rss('RssAnon')} MB, file-backed {rss('RssFile')} MB)", flush=True)
 
 stage("python")
 import numpy  # noqa
@@ -20,6 +20,11 @@ import fastapi, httpx  # noqa
 stage("fastapi+httpx")
 import onnxruntime, tokenizers  # noqa
 stage("onnxruntime+tokenizers")
+from pathlib import Path
+from tokenizers import Tokenizer
+_t = Tokenizer.from_file(str(next(Path(os.getenv("MODEL_CACHE", "models")).rglob("tokenizer.json"))))
+stage("tokenizer alone")
+del _t
 from rag.embeddings import get_embedder
 emb = get_embedder()
 stage("embedder loaded")
