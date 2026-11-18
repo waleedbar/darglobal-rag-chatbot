@@ -3,7 +3,7 @@
 The published ONNX file stores float16 weights. On CPU, onnxruntime casts those to float32 at load,
 so the resident size more than doubles. Here we:
   1. convert every float16 tensor / type in the graph to float32,
-  2. dynamically quantize MatMul + Gather (incl. the 250k-token embedding table) weights to int8,
+  2. store the 250k-token vocabulary table as row-wise int8 (the bulk of the weights),
   3. sanity-check the result against the float32 graph (cosine similarity of sentence embeddings).
 The int8 model is used for both the index and queries, so vectors stay consistent. If any step fails
 the original file is left untouched.
@@ -38,12 +38,54 @@ def to_float32(src: Path, dst: Path) -> None:
                     fix_tensor(a.t)
                 if a.type == onnx.AttributeProto.GRAPH:
                     fix_graph(a.g)
-        for vi in list(g.input) + list(g.output):
+        for vi in list(g.input) + list(g.output) + list(g.value_info):
             if vi.type.tensor_type.elem_type == TensorProto.FLOAT16:
                 vi.type.tensor_type.elem_type = TensorProto.FLOAT
-        g.ClearField("value_info")
 
     fix_graph(m.graph)
+    onnx.save(m, str(dst))
+
+
+def quantize_vocab_table(src: Path, dst: Path) -> None:
+    """Row-wise int8 for the big token-embedding table: Gather(int8) -> Cast -> Mul(Gather(scale)).
+
+    The vocabulary table (250k x 384) is ~80% of the parameters; everything else stays float32,
+    so no shape inference over the fused contrib ops is needed.
+    """
+    import onnx
+    from onnx import TensorProto, helper, numpy_helper
+
+    m = onnx.load(str(src))
+    g = m.graph
+    inits = {t.name: t for t in g.initializer}
+    done = 0
+    for node in list(g.node):
+        if node.op_type != "Gather" or node.input[0] not in inits:
+            continue
+        w = numpy_helper.to_array(inits[node.input[0]]).astype(np.float32)
+        if w.ndim != 2 or w.shape[0] < 50_000:
+            continue
+        scale = np.maximum(np.abs(w).max(1, keepdims=True), 1e-8) / 127.0
+        q = np.clip(np.round(w / scale), -127, 127).astype(np.int8)
+        base = node.input[0]
+        g.initializer.remove(inits[base])
+        g.initializer.extend([numpy_helper.from_array(q, base + "_q8"),
+                              numpy_helper.from_array(scale.astype(np.float32), base + "_scale")])
+        out, ids = node.output[0], node.input[1]
+        axis = [a.i for a in node.attribute if a.name == "axis"] or [0]
+        idx = list(g.node).index(node)
+        g.node.remove(node)
+        new = [
+            helper.make_node("Gather", [base + "_q8", ids], [out + "_q8"], axis=axis[0]),
+            helper.make_node("Cast", [out + "_q8"], [out + "_f"], to=TensorProto.FLOAT),
+            helper.make_node("Gather", [base + "_scale", ids], [out + "_s"], axis=axis[0]),
+            helper.make_node("Mul", [out + "_f", out + "_s"], [out]),
+        ]
+        for k, n in enumerate(new):
+            g.node.insert(idx + k, n)
+        done += 1
+    if not done:
+        raise ValueError("no vocabulary Gather found")
     onnx.save(m, str(dst))
 
 
@@ -75,16 +117,13 @@ def main() -> int:
     if not models:
         print("quantize: no ONNX model found, skipping")
         return 0
-    from onnxruntime.quantization import QuantType, quantize_dynamic
-
     for path in models:
         real = path.resolve()  # HF cache files are symlinks into blobs/
         f32, q8 = real.with_suffix(".f32.tmp"), real.with_suffix(".int8.tmp")
         tok = path.parent / "tokenizer.json"
         try:
             to_float32(real, f32)
-            quantize_dynamic(str(f32), str(q8), weight_type=QuantType.QInt8,
-                             op_types_to_quantize=["MatMul", "Gather"])
+            quantize_vocab_table(f32, q8)
             ref, new = sentence_vecs(f32, tok, True), sentence_vecs(q8, tok, False)
             cos = float((ref * new).sum(1).min())
             print(f"quantize: {path.name} {real.stat().st_size / 1e6:.0f} MB -> {q8.stat().st_size / 1e6:.0f} MB, "
