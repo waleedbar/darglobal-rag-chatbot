@@ -23,7 +23,7 @@ COPY --chown=user . .
 # Download the multilingual embedding model once (ONNX) so runtime needs no model download,
 # then quantize it to int8 so the whole service fits in 512 MB of RAM.
 RUN if [ "$EMBED_BACKEND" != "hash" ]; then \
-      python -c "from rag.embeddings import FastEmbedEmbedder; FastEmbedEmbedder()" && \
+      python -c "import os; from fastembed import TextEmbedding; TextEmbedding(os.environ['EMBED_MODEL'], cache_dir=os.environ['MODEL_CACHE'], lazy_load=True)" && \
       pip install "onnx>=1.17" && python scripts/quantize_model.py && pip uninstall -y onnx; fi
 
 # Decrypt the Wasalt snapshot if the DATA_KEY build secret is provided (not redistributed in plain form),

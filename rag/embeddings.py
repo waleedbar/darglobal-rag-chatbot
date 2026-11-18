@@ -53,7 +53,11 @@ class FastEmbedEmbedder:
         so.enable_cpu_mem_arena = False
         so.intra_op_num_threads = int(os.getenv("EMBED_THREADS", "2"))
         so.inter_op_num_threads = 1
-        self.session = ort.InferenceSession(str(found), so, providers=["CPUExecutionProvider"])
+        try:
+            self.session = ort.InferenceSession(str(found), so, providers=["CPUExecutionProvider"])
+        except Exception:  # un-quantized float16 file: needs ORT's default graph transforms
+            so.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+            self.session = ort.InferenceSession(str(found), so, providers=["CPUExecutionProvider"])
         self.inputs = {i.name for i in self.session.get_inputs()}
         self.tok = Tokenizer.from_file(str(found.parent / "tokenizer.json"))
         self.tok.enable_truncation(self.MAX_TOKENS)
@@ -74,7 +78,7 @@ class FastEmbedEmbedder:
             feed = {"input_ids": ids, "attention_mask": mask}
             if "token_type_ids" in self.inputs:
                 feed["token_type_ids"] = np.zeros_like(ids)
-            hidden = self.session.run(None, {k: v for k, v in feed.items() if k in self.inputs})[0]
+            hidden = self.session.run(None, {k: v for k, v in feed.items() if k in self.inputs})[0].astype("float32")
             if hidden.ndim == 3:  # mean pooling over real tokens
                 m = mask[..., None].astype("float32")
                 hidden = (hidden * m).sum(1) / np.clip(m.sum(1), 1e-9, None)
