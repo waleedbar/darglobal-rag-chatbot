@@ -88,10 +88,7 @@ def test_price_summary_documents():
     assert "median 2,000,000 SAR" in s["price-stats-villa"]["text"] and "sample of 3 Wasalt listings" in s["price-stats-villa"]["text"]
 
 
-def test_aggregate_questions_route_to_statistics(store):
-    from rag.text import aggregate_intent
-    assert aggregate_intent("ما هي أرخص فيلا في جدة؟") == ("cheapest",)
-    assert aggregate_intent("When is the handover of Neptune?") == ()
+def test_aggregate_questions_find_the_statistics_docs(store):
     for q, frag in [("What is the cheapest villa in Jeddah?", "#cheapest-villa"), ("أغلى فيلا في جدة", "#most-expensive-villa"),
                     ("average villa price in Jeddah", "#price-stats-villa")]:
         assert any(frag in h["url"] for h in store.search(q, k=3)), q

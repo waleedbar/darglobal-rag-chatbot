@@ -49,14 +49,3 @@ def tokenize(text: str) -> list[str]:
         toks.append(w)
     return toks
 
-
-# Questions that need statistics over many listings (answered from rag/summaries.py documents).
-_AGG = [("cheapest", r"cheap|lowest|least expensive|budget|affordable|minimum price|أرخص|ارخص|أقل سعر|اقل سعر"),
-        ("most-expensive", r"most expensive|highest|priciest|maximum price|أغلى|اغلى|أعلى سعر|اعلى سعر"),
-        ("price-stats", r"average|median|typical|range|mean|متوسط|معدل|نطاق|كم أسعار|كم اسعار|كم سعر|how much|price of|prices"),
-        ("by-bedrooms", r"\b\d\s*-?\s*(?:bed|br\b|bedroom)|bedrooms?|غرف|غرفة|غرفتين")]
-
-
-def aggregate_intent(q: str) -> tuple[str, ...]:
-    """Which kinds of statistics a question asks for, e.g. ("cheapest",). Empty for ordinary questions."""
-    return tuple(kind for kind, pat in _AGG if re.search(pat, q, re.I))
