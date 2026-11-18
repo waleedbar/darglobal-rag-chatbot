@@ -24,6 +24,9 @@ def load_docs(raw_dir: Path = RAW) -> list[dict]:
     docs = []
     for f in sorted(raw_dir.glob("*.jsonl")):
         docs += [json.loads(line) for line in f.read_text(encoding="utf-8").splitlines() if line.strip()]
+    for d in docs:  # older snapshots: make explicit that Wasalt does not state the rent period
+        d["text"] = d.get("text", "").replace("(rental price as listed on Wasalt)",
+                                              "(rental price as listed on Wasalt; rent period not stated)")
     return docs
 
 

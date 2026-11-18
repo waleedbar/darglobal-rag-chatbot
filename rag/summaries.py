@@ -26,7 +26,7 @@ def build_summaries(docs: list[dict]) -> list[dict]:
         items.sort(key=lambda d: d["meta"]["price"])
         prices = [d["meta"]["price"] for d in items]
         cur = items[0]["meta"].get("currency", "SAR")
-        unit = " (rent as listed)" if purpose == "rent" else ""
+        unit = " (rent as listed; period not stated)" if purpose == "rent" else ""
         lo, hi = items[0], items[-1]
         districts = sorted({d["meta"].get("district") for d in items if d["meta"].get("district")})
         text = (f"Summary of {len(items)} Wasalt listings: {subtype} for {purpose} in {city}, Saudi Arabia "
