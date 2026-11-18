@@ -80,3 +80,12 @@ def test_seed_list_has_all_catalogue_projects():
     found = darglobal.discover_projects(NoNet())
     assert len(found) >= 38 and "https://darglobal.co.uk/neptune" in found
     assert "https://darglobal.co.uk/Sunrise-Haven-Luxury-Villas" in found  # case preserved
+
+
+def test_embedded_text_fallback_for_client_rendered_pages():
+    nd = {"props": {"pageProps": {"project": {"title": "Trump Tower Jeddah overlooking the Red Sea",
+                                              "image": "https://cdn/x.jpg", "id": "abc123",
+                                              "specs": [{"label": "Handover expected in Q4 2029"}]}}}}
+    html = f'<html><body><div id="__next"></div><script id="__NEXT_DATA__" type="application/json">{json.dumps(nd)}</script></body></html>'
+    t = darglobal.embedded_text(html)
+    assert "Red Sea" in t and "Q4 2029" in t and "cdn" not in t and "abc123" not in t

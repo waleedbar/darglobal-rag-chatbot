@@ -9,7 +9,7 @@ from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup
 
-from .clean import scrub, visible_text
+from .clean import next_data, scrub, visible_text
 from .http import PoliteClient, RobotsDisallowed
 
 log = logging.getLogger("scraper.darglobal")
@@ -56,8 +56,34 @@ def discover_projects(client: PoliteClient) -> dict[str, str]:
     return found
 
 
+def embedded_text(html: str, max_chars: int = 12000) -> str:
+    """Collect human-readable strings from __NEXT_DATA__ (titles, descriptions, specs), skipping URLs/ids/code."""
+    data = next_data(html)
+    if not data:
+        return ""
+    out, seen = [], set()
+
+    def walk(o):
+        if isinstance(o, dict):
+            for v in o.values():
+                walk(v)
+        elif isinstance(o, list):
+            for v in o:
+                walk(v)
+        elif isinstance(o, str):
+            t = re.sub(r"<[^>]+>", " ", o)
+            t = " ".join(t.split())
+            if (len(t) >= 12 and " " in t and t not in seen and not re.match(r"^(https?:|/|#|\{|data:)", t)
+                    and not re.search(r"\.(jpg|png|webp|svg|mp4)\b", t, re.I)):
+                seen.add(t)
+                out.append(t)
+
+    walk(data.get("props", {}).get("pageProps", {}))
+    return scrub("\n".join(out))[:max_chars]
+
+
 def facts(text: str) -> dict:
-    prices = [" ".join(filter(None, m)).strip() for m in PRICE.findall(text)][:5]
+    prices = list(dict.fromkeys(" ".join(filter(None, m)).strip() for m in PRICE.findall(text)))[:5]
     beds = sorted({int(x) for m in BEDS.findall(text) for x in m if x})
     hand = HANDOVER.search(text)
     return {"prices_mentioned": prices, "bedrooms": beds,
@@ -71,6 +97,8 @@ def scrape_project(client: PoliteClient, url: str, label: str) -> dict | None:
         log.warning("%s -> %s", url, r.status_code)
         return None
     title, desc, text = visible_text(r.text)
+    if len(text) < 400:  # client-rendered page: fall back to the text embedded in Next.js page data
+        text = (text + "\n" + embedded_text(r.text)).strip()
     name, _, location = label.partition("|") if "|" in label else (label, "", "")
     f = facts(text)
     header = [f"Project: {title or name.strip()}", "Developer: Dar Global (DarGlobal PLC)"]

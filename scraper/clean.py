@@ -34,6 +34,8 @@ def visible_text(html: str, max_chars: int = 15000) -> tuple[str, str, str]:
         t = " ".join(el.get_text(" ", strip=True).split())
         if len(t) < 3 or t in seen or BOILERPLATE.search(t):
             continue
+        if lines and (t in lines[-1] or (len(lines) > 1 and t in lines[-2])):  # label/value repeated by the layout
+            continue
         seen.add(t)
         lines.append(f"## {t}" if el.name in ("h1", "h2", "h3") else t)
     text = scrub("\n".join(lines))[:max_chars]

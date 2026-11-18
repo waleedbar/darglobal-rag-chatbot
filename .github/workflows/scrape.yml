@@ -24,14 +24,14 @@ jobs:
           python-version: "3.12"
       - run: pip install -r requirements-scraper.txt
       - name: Run scraper (robots.txt-aware, 2-3 s between requests)
-        run: python -m scraper.run
+        run: python -m scraper.run --only darglobal   # wasalt.sa returns 403 to cloud IPs - see README
       - name: Show what was collected
         run: |
           wc -l data/raw/*.jsonl
-          head -c 1500 data/raw/darglobal.jsonl; echo; head -c 1500 data/raw/wasalt.jsonl
+          head -c 1500 data/raw/darglobal.jsonl
       - name: Commit data snapshot
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/raw
+          git add data/raw/darglobal.jsonl
           git diff --cached --quiet || git commit -m "data: refresh scraped snapshot" && git push

@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dar Global &amp; Wasalt property assistant</title>
+<style>
+  :root { --ink:#1f2933; --muted:#64748b; --line:#e2e8f0; --brand:#0f3d3e; --accent:#b08d57; --bg:#f7f6f2; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:15px/1.55 system-ui, -apple-system, "Segoe UI", Tahoma, sans-serif; color:var(--ink); background:var(--bg); }
+  header { background:var(--brand); color:#fff; padding:18px 20px; }
+  header h1 { margin:0; font-size:19px; font-weight:600; letter-spacing:.2px; }
+  header p { margin:4px 0 0; font-size:13px; opacity:.8; }
+  main { max-width:860px; margin:0 auto; padding:18px 16px 140px; }
+  .examples { display:flex; flex-wrap:wrap; gap:8px; margin:6px 0 18px; }
+  .examples button { border:1px solid var(--line); background:#fff; border-radius:999px; padding:6px 12px; font-size:13px; cursor:pointer; color:var(--ink); }
+  .examples button:hover { border-color:var(--accent); }
+  .msg { margin:14px 0; display:flex; }
+  .msg.user { justify-content:flex-end; }
+  .bubble { max-width:85%; padding:12px 14px; border-radius:14px; background:#fff; border:1px solid var(--line); white-space:pre-wrap; }
+  .user .bubble { background:var(--brand); color:#fff; border-color:var(--brand); }
+  .idk .bubble { border-color:#f1c27d; background:#fffaf0; }
+  .sources { margin-top:10px; border-top:1px solid var(--line); padding-top:8px; font-size:13px; white-space:normal; }
+  .sources a { color:var(--brand); font-weight:600; text-decoration:none; }
+  .sources a:hover { text-decoration:underline; }
+  .sources .src { margin:4px 0; }
+  .tag { font-size:11px; border-radius:6px; padding:1px 6px; margin-inline-start:6px; background:#eef2f2; color:var(--muted); }
+  .meta { color:var(--muted); font-size:12px; margin-top:6px; }
+  form { position:fixed; bottom:0; left:0; right:0; background:linear-gradient(transparent, var(--bg) 30%); padding:18px 16px; }
+  .bar { max-width:860px; margin:0 auto; display:flex; gap:8px; }
+  textarea { flex:1; resize:none; height:52px; padding:14px; border-radius:12px; border:1px solid var(--line); font:inherit; }
+  button.send { background:var(--accent); color:#fff; border:0; border-radius:12px; padding:0 20px; font-weight:600; cursor:pointer; }
+  button.send:disabled { opacity:.5; }
+  [dir=rtl] { text-align:right; }
+  footer { color:var(--muted); font-size:12px; text-align:center; margin-top:24px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Dar Global &amp; Wasalt property assistant · المساعد العقاري</h1>
+  <p>Answers only from public pages of darglobal.co.uk and wasalt.sa, with links to the source. Ask in English or Arabic.</p>
+</header>
+<main>
+  <div class="examples" id="examples"></div>
+  <div id="chat"></div>
+  <footer id="stats"></footer>
+</main>
+<form id="f">
+  <div class="bar">
+    <textarea id="q" placeholder="Ask about a project, a city, prices, amenities…  اسأل عن مشروع أو مدينة أو الأسعار" required></textarea>
+    <button class="send" id="send">Ask</button>
+  </div>
+</form>
+<script>
+const EXAMPLES = [
+  "Which Dar Global projects are in Saudi Arabia?",
+  "When is the handover of Neptune, Interiors by Mouawad?",
+  "What amenities are near the Neptune villas?",
+  "What is the cheapest villa for sale in Jeddah on Wasalt?",
+  "ما هي مشاريع دار جلوبال في عُمان؟",
+  "كم متوسط سعر الشقق للبيع في الرياض؟",
+  "What is the price of a Trump Tower Jeddah apartment?",
+  "Does Dar Global have projects in Japan?"
+];
+const chat = document.getElementById('chat'), q = document.getElementById('q'), send = document.getElementById('send');
+const isAr = t => (t.match(/[؀-ۿ]/g)||[]).length >= ((t.match(/[A-Za-z]/g)||[]).length * 0.5) && /[؀-ۿ]/.test(t);
+const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function add(role, html, cls='') {
+  const d = document.createElement('div'); d.className = `msg ${role} ${cls}`;
+  d.innerHTML = `<div class="bubble">${html}</div>`; chat.appendChild(d);
+  d.scrollIntoView({behavior:'smooth', block:'end'}); return d;
+}
+async function ask(text) {
+  if (!text.trim()) return;
+  add('user', esc(text)).querySelector('.bubble').dir = isAr(text) ? 'rtl' : 'ltr';
+  q.value = ''; send.disabled = true;
+  const wait = add('bot', isAr(text) ? '…جارٍ البحث في المصادر' : 'Searching the sources…');
+  try {
+    const r = await fetch('/api/chat', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({question:text})});
+    const data = await r.json();
+    wait.remove();
+    if (!r.ok) { add('bot', esc(data.detail || 'Error'), 'idk'); return; }
+    let html = esc(data.answer);
+    if (data.sources.length) {
+      html += '<div class="sources">' + data.sources.map(s =>
+        `<div class="src" dir="ltr">[${s.n}] <a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a><span class="tag">${s.source}</span></div>`).join('') + '</div>';
+    }
+    html += `<div class="meta" dir="ltr">${data.model ? 'model: ' + esc(data.model) + ' · ' : ''}${data.latency_ms} ms</div>`;
+    const m = add('bot', html, data.idk ? 'idk' : '');
+    m.querySelector('.bubble').dir = data.lang === 'ar' ? 'rtl' : 'ltr';
+  } catch (e) { wait.remove(); add('bot', 'Network error, please retry.', 'idk'); }
+  finally { send.disabled = false; q.focus(); }
+}
+document.getElementById('f').onsubmit = e => { e.preventDefault(); ask(q.value); };
+q.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(q.value); } });
+q.addEventListener('input', () => { q.dir = isAr(q.value) ? 'rtl' : 'ltr'; });
+EXAMPLES.forEach(t => { const b = document.createElement('button'); b.type='button'; b.textContent = t; b.dir = isAr(t)?'rtl':'ltr'; b.onclick = () => ask(t); document.getElementById('examples').appendChild(b); });
+fetch('/api/health').then(r => r.json()).then(s => {
+  document.getElementById('stats').textContent =
+    `Index: ${s.docs} documents · ${s.chunks} chunks · Dar Global ${s.by_source.darglobal||0} / Wasalt ${s.by_source.wasalt||0} · scraped ${String(s.scraped_at).slice(0,10)} · embeddings ${s.embedder}`;
+}).catch(()=>{});
+</script>
+</body>
+</html>
