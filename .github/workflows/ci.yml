@@ -1,4 +1,4 @@
-name: CI & deploy
+name: CI
 
 on:
   push:
@@ -22,39 +22,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - name: Build image with the real embedding model (e5-large) and index
+      - name: Build the production image (real embedding model + index)
         env:
           DATA_KEY: ${{ secrets.DATA_KEY }}
         run: |
           printf '%s' "$DATA_KEY" > /tmp/data_key
           DOCKER_BUILDKIT=1 docker build --secret id=DATA_KEY,src=/tmp/data_key -t dgrag .
           rm -f /tmp/data_key
-      - name: Smoke test the container (offline LLM stand-in)
+          docker images dgrag --format 'image size: {{.Size}}'
+      - name: Smoke test the container (offline LLM stand-in, 512 MB memory cap like the free host)
         run: |
-          docker run -d --name app -e LLM_BACKEND=echo -p 7860:7860 dgrag
+          docker run -d --name app --memory=512m -e LLM_BACKEND=echo -p 7860:7860 dgrag
           for i in $(seq 1 60); do curl -sf localhost:7860/api/health && break; sleep 2; done
           echo; curl -sf localhost:7860/api/health | python -m json.tool
-          curl -sf -X POST localhost:7860/api/chat -H 'content-type: application/json' \
-               -d '{"question":"When is the handover of Neptune?"}' | python -m json.tool
+          for q in "When is the handover of Neptune?" "ما هي مشاريع دار جلوبال في عُمان؟" "cheapest villa in Jeddah"; do
+            curl -sf -X POST localhost:7860/api/chat -H 'content-type: application/json' \
+                 -d "{\"question\":\"$q\"}" | python -c "import sys,json; d=json.load(sys.stdin); print(d['lang'], [s['url'] for s in d['sources']])"
+          done
           curl -sf localhost:7860/ | grep -q "property assistant"
+          docker stats --no-stream --format 'memory: {{.MemUsage}}' app
+          test "$(docker inspect -f '{{.State.OOMKilled}}' app)" = "false"
       - name: Retrieval quality (real embeddings)
         run: docker exec app python scripts/eval_retrieval.py
-
-  deploy:
-    needs: docker
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
-    env:
-      HF_TOKEN: ${{ secrets.HF_TOKEN }}
-      HF_SPACE: ${{ vars.HF_SPACE }}
-      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-      DATA_KEY: ${{ secrets.DATA_KEY }}
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
-        with: { python-version: "3.12" }
-      - name: Deploy to Hugging Face Space
-        if: env.HF_TOKEN != '' && env.HF_SPACE != ''
-        run: |
-          pip install "huggingface_hub>=0.26"
-          python scripts/deploy_hf.py
