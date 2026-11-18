@@ -53,10 +53,10 @@ def import_snapshot(path: str) -> int:
 
 def _key() -> str:
     """The Fernet key from DATA_KEY, tolerant of how secret stores hand it over
-    (trailing newline, quotes/backticks, a `DATA_KEY=` prefix, BOM or invisible direction marks)."""
+    (trailing newline, a dropped '=' padding, quotes/backticks, a `DATA_KEY=` prefix, BOM or invisible direction marks)."""
     raw = os.environ.get("DATA_KEY", "")
-    m = re.search(r"[A-Za-z0-9_-]{43}=", raw)
-    return m.group(0) if m else raw.strip()
+    m = re.search(r"[A-Za-z0-9_-]{43}", raw)
+    return m.group(0) + "=" if m else raw.strip()  # the "=" padding is often lost when copy-pasting
 
 
 def _fernet():
