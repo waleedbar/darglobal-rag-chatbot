@@ -99,7 +99,7 @@ Refresh data: `pip install -r requirements-scraper.txt && python -m scraper.run 
 | Variable | Default | Purpose |
 |---|---|---|
 | `OPENROUTER_API_KEY` | – | OpenRouter key (platform secret) |
-| `OPENROUTER_MODELS` | Llama 3.3 70B, Gemma 3 27B, Mistral Small 3.2, Qwen3 (`:free`) | fallback chain, tried in order on 429/outage |
+| `OPENROUTER_MODELS` | Gemma 4 31B, Nemotron 3 Ultra, Gemma 4 26B, ERNIE 5.5 Flash (`:free`) | fallback chain, tried in order on 429/outage; intersected at startup with OpenRouter's live list of free models |
 | `EMBED_MODEL` | `intfloat/multilingual-e5-large` | embedding model |
 | `TOP_K` / `RATE_LIMIT_PER_MIN` | 6 / 12 | chunks sent to the model / questions per IP per minute |
 | `DATA_KEY` | – | build secret that decrypts the Wasalt snapshot |

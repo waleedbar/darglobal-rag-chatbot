@@ -10,11 +10,14 @@ import httpx
 
 log = logging.getLogger("rag.llm")
 URL = "https://openrouter.ai/api/v1/chat/completions"
+# Preferred free models (checked on openrouter.ai/api/v1/models, Nov 2026). Free models come and go, so at
+# startup the list is intersected with OpenRouter's live catalogue and topped up with other ":free" models.
 DEFAULT_MODELS = os.getenv(
     "OPENROUTER_MODELS",
-    "meta-llama/llama-3.3-70b-instruct:free,google/gemma-3-27b-it:free,"
-    "mistralai/mistral-small-3.2-24b-instruct:free,qwen/qwen3-235b-a22b:free",
+    "google/gemma-4-31b-it:free,nvidia/nemotron-3-ultra-550b-a55b:free,"
+    "google/gemma-4-26b-a4b-it:free,baidu/ernie-5.5-flash-preview:free",
 )
+PREFERRED_FAMILIES = ("gemma", "nemotron", "llama", "qwen", "mistral", "ernie", "deepseek")
 
 
 class LLMError(RuntimeError):
@@ -22,10 +25,29 @@ class LLMError(RuntimeError):
 
 
 class OpenRouterLLM:
-    def __init__(self, models: str = DEFAULT_MODELS, api_key: str | None = None, timeout: float = 60):
+    def __init__(self, models: str = DEFAULT_MODELS, api_key: str | None = None, timeout: float = 60,
+                 discover: bool = True):
         self.models = [m.strip() for m in models.split(",") if m.strip()]
         self.api_key = api_key or os.getenv("OPENROUTER_API_KEY", "")
         self.timeout = timeout
+        if discover:
+            self.models = self._live_free_models(self.models)
+
+    @staticmethod
+    def _live_free_models(preferred: list[str]) -> list[str]:
+        """Keep preferred models that are still free on OpenRouter, then add other free chat models as backups."""
+        try:
+            data = httpx.get("https://openrouter.ai/api/v1/models", timeout=15).json()["data"]
+        except Exception as e:  # noqa: BLE001 - offline start: keep the configured list
+            log.warning("could not read OpenRouter model list (%s); using configured models", e)
+            return preferred
+        free = [m["id"] for m in data if m["id"].endswith(":free") and "text" in
+                str((m.get("architecture") or {}).get("input_modalities", ["text"]))]
+        keep = [m for m in preferred if m in free]
+        extra = [m for m in free if m not in keep and any(f in m for f in PREFERRED_FAMILIES)]
+        chosen = (keep + extra)[:6] or preferred
+        log.info("OpenRouter free models: %s", chosen)
+        return chosen
 
     @property
     def configured(self) -> bool:

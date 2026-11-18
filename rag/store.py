@@ -12,7 +12,7 @@ from rank_bm25 import BM25Okapi
 
 from .chunking import chunk_doc
 from .summaries import build_summaries
-from .text import tokenize
+from .text import expand_query, tokenize
 
 log = logging.getLogger("rag.store")
 ROOT = Path(__file__).resolve().parent.parent
@@ -56,7 +56,9 @@ class Store:
         self.stats = json.loads((index_dir / "stats.json").read_text())
 
     def search(self, query: str, k: int = 6, pool: int = 30) -> list[dict]:
-        """Hybrid search. Returns chunks with `score` (cosine of best dense match) and `rrf`."""
+        """Hybrid search. Returns chunks with `score` (cosine of best dense match) and `rrf`.
+        At most 2 chunks per page, so one long page cannot crowd out other relevant sources."""
+        query = expand_query(query)
         qv = self.embedder.embed_query(query)
         sims, ids = self.index.search(qv, min(pool, len(self.chunks)))
         dense_rank = {int(i): r for r, i in enumerate(ids[0]) if i >= 0}
@@ -68,7 +70,14 @@ class Store:
         for ranks in (dense_rank, bm_rank):
             for i, r in ranks.items():
                 fused[i] = fused.get(i, 0.0) + 1.0 / (60 + r)
-        best = sorted(fused, key=fused.get, reverse=True)[:k]
+        best, per_url = [], {}
+        for i in sorted(fused, key=fused.get, reverse=True):
+            url = self.chunks[i]["url"]
+            if per_url.get(url, 0) < 2:
+                best.append(i)
+                per_url[url] = per_url.get(url, 0) + 1
+            if len(best) == k:
+                break
         out = []
         for i in best:
             c = dict(self.chunks[i])

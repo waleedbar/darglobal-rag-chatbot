@@ -121,3 +121,16 @@ def test_api(store, monkeypatch):
     for _ in range(int(os.getenv("RATE_LIMIT_PER_MIN", "12"))):
         c.post("/api/chat", json={"question": "Neptune handover?"})
     assert c.post("/api/chat", json={"question": "Neptune handover?"}).status_code == 429
+
+
+def test_free_model_discovery(monkeypatch):
+    import rag.llm as L
+
+    class Resp:
+        def json(self):
+            return {"data": [{"id": "google/gemma-4-31b-it:free"}, {"id": "acme/new-llama-9b:free"},
+                             {"id": "paid/model"}, {"id": "nvidia/nemotron-3-ultra-550b-a55b:free"}]}
+    monkeypatch.setattr(L.httpx, "get", lambda *a, **k: Resp())
+    m = L.OpenRouterLLM(models="gone/model:free,google/gemma-4-31b-it:free", api_key="x").models
+    assert m[0] == "google/gemma-4-31b-it:free" and "gone/model:free" not in m and "paid/model" not in m
+    assert "acme/new-llama-9b:free" in m and "nvidia/nemotron-3-ultra-550b-a55b:free" in m
