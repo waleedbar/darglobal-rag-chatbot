@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from pathlib import Path
 
 import faiss
@@ -15,8 +16,8 @@ from .text import tokenize
 
 log = logging.getLogger("rag.store")
 ROOT = Path(__file__).resolve().parent.parent
-RAW = ROOT / "data" / "raw"
-INDEX_DIR = ROOT / "index"
+RAW = Path(os.getenv("RAW_DIR", ROOT / "data" / "raw"))
+INDEX_DIR = Path(os.getenv("INDEX_DIR", ROOT / "index"))
 
 
 def load_docs(raw_dir: Path = RAW) -> list[dict]:

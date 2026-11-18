@@ -67,7 +67,8 @@ def parse_listing(p: dict, purpose: str) -> dict | None:
              f"Purpose: for {purpose}",
              f"Type: {keep.get('propertySubType', '')} ({keep.get('propertyMainType', '')})",
              f"Location: {district}, Saudi Arabia",
-             f"Price: {int(float(price)):,} {currency}" + (" per year" if purpose == "rent" else "") if price else "Price: not listed"]
+             (f"{'Rent' if purpose == 'rent' else 'Price'}: {int(float(price)):,} {currency}"
+              + (" (rental price as listed on Wasalt)" if purpose == "rent" else "")) if price else "Price: not listed"]
     lines += [f"{k}: {v}" for k, v in attrs.items()]
     if amenities:
         lines.append("Amenities: " + ", ".join(amenities))

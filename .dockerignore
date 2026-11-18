@@ -1,0 +1,11 @@
+.git
+.github
+__pycache__
+*.pyc
+.pytest_cache
+.env
+index/
+models/
+data/raw/wasalt.jsonl
+wasalt_snapshot.jsonl
+tests/

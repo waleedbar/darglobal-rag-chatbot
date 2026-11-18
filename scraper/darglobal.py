@@ -68,6 +68,10 @@ def embedded_text(html: str, max_chars: int = 12000) -> str:
             for v in o.values():
                 walk(v)
         elif isinstance(o, list):
+            short = [v for v in o if isinstance(v, str) and len(v) < 40] + \
+                    [v.get("name") or v.get("label") for v in o if isinstance(v, dict) and len(str(v.get("name") or v.get("label") or "")) < 40]
+            if len(o) > 30 and len(short) > 0.8 * len(o):  # dropdown data (countries, codes) - not content
+                return
             for v in o:
                 walk(v)
         elif isinstance(o, str):
@@ -108,8 +112,8 @@ def scrape_project(client: PoliteClient, url: str, label: str) -> dict | None:
         header.append(f"Summary: {scrub(desc)}")
     if f["handover"]:
         header.append(f"Handover/completion: {f['handover']}")
-    header.append("Prices on page: " + (", ".join(f["prices_mentioned"]) if f["prices_published"]
-                                        else "not published on the project page (contact sales)"))
+    # NOTE: no price line here on purpose. Figures like "SAR 4M+" on these pages are often the Saudi
+    # residency-investment threshold, not a unit price; the raw page text keeps that context for the LLM.
     return {"id": "dg:" + urlparse(url).path.strip("/").lower(), "source": "darglobal", "type": "project",
             "url": url, "title": title or name.strip(), "lang": "en",
             "text": "\n".join(header) + "\n\n" + text, "meta": {"location": location.strip(), **f},

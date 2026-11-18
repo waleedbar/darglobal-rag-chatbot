@@ -89,3 +89,11 @@ def test_embedded_text_fallback_for_client_rendered_pages():
     html = f'<html><body><div id="__next"></div><script id="__NEXT_DATA__" type="application/json">{json.dumps(nd)}</script></body></html>'
     t = darglobal.embedded_text(html)
     assert "Red Sea" in t and "Q4 2029" in t and "cdn" not in t and "abc123" not in t
+
+
+def test_embedded_text_skips_dropdown_lists():
+    countries = [{"name": f"Country {i}"} for i in range(60)]
+    nd = {"props": {"pageProps": {"form": {"countries": countries}, "about": "Seafront residences with Red Sea views"}}}
+    html = f'<script id="__NEXT_DATA__" type="application/json">{json.dumps(nd)}</script>'
+    t = darglobal.embedded_text(html)
+    assert "Red Sea" in t and "Country 5" not in t
