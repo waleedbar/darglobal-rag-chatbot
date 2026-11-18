@@ -69,11 +69,11 @@ class FastEmbedEmbedder:
             so.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
             self.session = ort.InferenceSession(str(found), so, providers=["CPUExecutionProvider"])
         self.inputs = {i.name for i in self.session.get_inputs()}
-        _trim_heap()
         self.tok = Tokenizer.from_file(str(found.parent / "tokenizer.json"))
         self.tok.enable_truncation(self.MAX_TOKENS)
         pad = self.tok.token_to_id("<pad>")
         self.tok.enable_padding(pad_id=1 if pad is None else pad, pad_token="<pad>")
+        _trim_heap()  # parsing the 250k-entry tokenizer.json leaves ~200 MB of freed-but-held heap
 
     def _find(self, cache: Path) -> Path | None:
         key = self.name.split("/")[-1].lower()

@@ -24,6 +24,8 @@ from pathlib import Path
 from tokenizers import Tokenizer
 _t = Tokenizer.from_file(str(next(Path(os.getenv("MODEL_CACHE", "models")).rglob("tokenizer.json"))))
 stage("tokenizer alone")
+import ctypes; ctypes.CDLL("libc.so.6").malloc_trim(0)
+stage("tokenizer + malloc_trim")
 del _t
 from rag.embeddings import get_embedder
 emb = get_embedder()
