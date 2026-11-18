@@ -99,7 +99,7 @@
   /* ---------- chat ---------- */
   main { max-width:860px; margin:0 auto; padding:40px 20px 190px; }
   #chat { display:flex; flex-direction:column; gap:22px; }
-  .msg { display:flex; animation:msgIn .45s var(--ease); }
+  .msg { display:flex; animation:msgIn .45s var(--ease); scroll-margin-bottom:150px; scroll-margin-top:90px; }
   @keyframes msgIn { from { opacity:0; transform:translateY(10px); } }
   .msg.user { justify-content:flex-end; }
   .bubble { max-width:min(680px, 88%); padding:16px 20px; background:var(--paper); border:1px solid var(--line); white-space:pre-wrap; overflow-wrap:anywhere;
