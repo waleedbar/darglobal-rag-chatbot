@@ -32,7 +32,7 @@ RUN if [ "$EMBED_BACKEND" != "hash" ]; then \
 RUN --mount=type=secret,id=DATA_KEY,mode=0444,required=false \
     DATA_KEY="$(cat /run/secrets/DATA_KEY 2>/dev/null || true)" python -m scraper.wasalt_import decrypt && \
     python -m rag.build_index && rm -f data/raw/wasalt.jsonl data/private/*.jsonl && \
-    chown -R user:user /app
+    chown -R user:user /app && chmod -R a+rX /app/models /app/index
 
 USER user
 EXPOSE 7860
