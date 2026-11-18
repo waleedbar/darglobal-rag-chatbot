@@ -1,0 +1,18 @@
+# Render Blueprint: deploys the Dockerfile as a free web service with a public URL.
+# Secrets are entered in the Render dashboard, never committed:
+#   - env var OPENROUTER_API_KEY
+#   - secret file DATA_KEY (decrypts the Wasalt snapshot during the Docker build via
+#     RUN --mount=type=secret,id=DATA_KEY)
+services:
+  - type: web
+    name: darglobal-rag-chatbot
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: RATE_LIMIT_PER_MIN
+        value: "12"

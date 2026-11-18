@@ -9,7 +9,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 \
 
 # EMBED_BACKEND=hash builds a tiny offline image for CI/local smoke tests (no model download)
 ARG EMBED_BACKEND=fastembed
-ENV EMBED_BACKEND=${EMBED_BACKEND}
+ARG EMBED_MODEL=sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
+ENV EMBED_BACKEND=${EMBED_BACKEND} EMBED_MODEL=${EMBED_MODEL}
 
 RUN useradd -m -u 1000 user
 WORKDIR /app
@@ -19,7 +20,7 @@ RUN pip install -r requirements.txt
 
 COPY --chown=user . .
 
-# Download the multilingual embedding model once (ONNX, ~2 GB) so runtime is offline-capable.
+# Download the multilingual embedding model once (ONNX) so runtime needs no model download.
 RUN if [ "$EMBED_BACKEND" != "hash" ]; then python -c "from rag.embeddings import FastEmbedEmbedder; FastEmbedEmbedder()"; fi
 
 # Decrypt the Wasalt snapshot if the DATA_KEY build secret is provided (not redistributed in plain form),
@@ -32,4 +33,4 @@ RUN --mount=type=secret,id=DATA_KEY,mode=0444,required=false \
 USER user
 EXPOSE 7860
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s CMD python -c "import urllib.request,os; urllib.request.urlopen(f'http://127.0.0.1:{os.environ.get(\"PORT\",\"7860\")}/api/health', timeout=4)"
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-7860} --workers 1"]
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-7860} --workers 1 --no-access-log"]

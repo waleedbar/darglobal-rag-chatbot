@@ -1,7 +1,8 @@
 """Embedding backends.
 
-* FastEmbedEmbedder - production: intfloat/multilingual-e5-large (ONNX, CPU), strong for Arabic and
-  English and for cross-lingual retrieval (Arabic question -> English page).
+* FastEmbedEmbedder - production: paraphrase-multilingual-MiniLM-L12-v2 (ONNX, CPU, ~220 MB, 50+ languages
+  incl. Arabic) so the container fits a 512 MB free instance; set EMBED_MODEL=intfloat/multilingual-e5-large
+  for higher recall when more RAM is available (both run locally: no API quota is spent on embeddings).
 * HashEmbedder - deterministic offline fallback used in unit tests (no model download).
 """
 from __future__ import annotations
@@ -13,7 +14,7 @@ import numpy as np
 
 from .text import normalize, tokenize
 
-DEFAULT_MODEL = os.getenv("EMBED_MODEL", "intfloat/multilingual-e5-large")
+DEFAULT_MODEL = os.getenv("EMBED_MODEL", "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
 
 
 def _l2(x: np.ndarray) -> np.ndarray:
