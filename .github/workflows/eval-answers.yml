@@ -1,0 +1,26 @@
+name: Evaluate live answers
+
+# Manually triggered: asks the deployed bot the labelled questions (real free OpenRouter model) and grades the answers.
+# Kept manual because the free model tier allows only 50 requests/day.
+on:
+  workflow_dispatch:
+    inputs:
+      ids:
+        description: "comma-separated question ids from eval/questions.jsonl (empty = all)"
+        default: ""
+      url:
+        description: "deployment to test"
+        default: "https://darglobal-rag-chatbot.onrender.com"
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with: { python-version: "3.12" }
+      - run: pip install -q httpx
+      - run: python scripts/eval_answers.py --url "${{ inputs.url }}" --ids "${{ inputs.ids }}" --out answer_results.md
+      - run: cat answer_results.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with: { name: answer_results, path: answer_results.md }
