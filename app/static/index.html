@@ -136,7 +136,9 @@
   textarea:focus-visible { outline:none; }
   textarea { flex:1; resize:none; border:0; outline:0; background:transparent; padding:16px 18px; min-height:56px; max-height:160px;
     font:400 15.5px/1.5 var(--sans); color:var(--ink); }
-  textarea::placeholder { color:#8A9098; }
+  textarea::placeholder { color:#8A9098; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  textarea { overflow-y:hidden; }
+  textarea.scroll { overflow-y:auto; }
   .send { flex:none; border:0; background:var(--bronze); color:#fff; padding:0 26px; font:500 12px/1 var(--sans); letter-spacing:.22em;
     text-transform:uppercase; cursor:pointer; transition:background .2s; }
   .send:hover { background:#57492F; }
@@ -169,6 +171,8 @@
     .skyline { height:38%; opacity:.6; }
     .hero-in { padding:36px 18px 116px; }
     .hero .lead { font-size:15px; }
+    .eyebrow { font-size:10px; letter-spacing:.2em; }
+    textarea { font-size:15px; padding:16px 14px; }
     .stats { gap:22px; } .stat b { font-size:28px; }
     .suggest { padding:0 14px; margin-top:-84px; }
     .cards { grid-template-columns:1fr; }
@@ -371,7 +375,7 @@ async function ask(text) {
   } catch (e) { wait.remove(); add('bot', esc(t.err), 'idk'); }
   finally { send.disabled = false; q.focus(); }
 }
-function autosize() { q.style.height = 'auto'; q.style.height = Math.min(q.scrollHeight, 160) + 'px'; }
+function autosize() { q.style.height = 'auto'; q.style.height = Math.min(q.scrollHeight, 160) + 'px'; q.classList.toggle('scroll', q.scrollHeight > 160); }
 $('#f').onsubmit = e => { e.preventDefault(); ask(q.value); };
 $('#reset').onclick = () => { history = []; chat.innerHTML = ''; document.body.classList.remove('chatting'); window.scrollTo({top:0}); q.focus(); };
 q.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(q.value); } });
