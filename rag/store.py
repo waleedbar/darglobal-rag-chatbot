@@ -60,7 +60,7 @@ class Store:
 
     def search(self, query: str, k: int = 6, pool: int = 30, mode: str = "hybrid") -> list[dict]:
         """Hybrid search. Returns chunks with `score` (cosine of best dense match) and `rrf`.
-        At most 2 chunks per page, so one long page cannot crowd out other relevant sources.
+        At most 3 chunks per page, so one long page cannot crowd out other relevant sources.
         `mode` = "dense" or "bm25" switches one retriever off (used by the ablation in scripts/eval_retrieval.py)."""
         query = expand_query(query)
         qv = self.embedder.embed_query(query)
@@ -78,7 +78,7 @@ class Store:
         best, per_url = [], {}
         for i in sorted(fused, key=fused.get, reverse=True):
             url = self.chunks[i]["url"]
-            if per_url.get(url, 0) < 2:
+            if per_url.get(url, 0) < 3:
                 best.append(i)
                 per_url[url] = per_url.get(url, 0) + 1
             if len(best) == k:

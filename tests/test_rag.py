@@ -71,8 +71,8 @@ def test_language_detection_and_arabic_tokens():
 def test_chunking_respects_size_and_keeps_text():
     text = "\n\n".join(f"## Section {i}\n" + "word " * 120 for i in range(6))
     chunks = split_text(text)
-    assert all(len(c) <= 1100 for c in chunks) and len(chunks) >= 3
-    assert "Section 5" in chunks[-1]
+    assert all(len(c) <= 600 for c in chunks) and len(chunks) >= 6
+    assert any("Section 5" in c for c in chunks[-3:]) and sum(c.count("word") for c in chunks) >= 6 * 120
 
 
 def test_hybrid_retrieval_finds_the_right_project(store):

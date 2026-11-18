@@ -5,8 +5,10 @@ from __future__ import annotations
 import os
 import re
 
-MAX_CHARS = int(os.getenv("CHUNK_CHARS", "1000"))
-OVERLAP = int(os.getenv("CHUNK_OVERLAP", "150"))
+# ~500 chars is about the 128-token window of the MiniLM embedder, so no part of a chunk is invisible to it;
+# it also scored best in the ablation (eval/retrieval_results.md).
+MAX_CHARS = int(os.getenv("CHUNK_CHARS", "500"))
+OVERLAP = int(os.getenv("CHUNK_OVERLAP", "80"))
 
 
 def _header(doc: dict) -> str:

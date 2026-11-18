@@ -55,6 +55,6 @@ jobs:
         run: |
           pip install -q cryptography -r requirements-scraper.txt
           python -m scraper.wasalt_import decrypt   # raw data only lives on this runner, never in an artifact
-          docker run --rm -v "$PWD/data/raw:/app/data/raw:ro" -v "$PWD/eval:/app/eval" dgrag \
+          docker run --rm -u "$(id -u):$(id -g)" -e HOME=/tmp -v "$PWD/data/raw:/app/data/raw:ro" -v "$PWD/eval:/app/eval" dgrag \
             python scripts/eval_retrieval.py --chunks 500,1000 --out eval/retrieval_results.md
           cat eval/retrieval_results.md >> "$GITHUB_STEP_SUMMARY"

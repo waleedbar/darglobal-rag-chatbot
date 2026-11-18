@@ -18,7 +18,7 @@ from .llm import LLMError, QuotaExceeded
 from .text import detect_lang, normalize, tokenize
 
 log = logging.getLogger("rag.pipeline")
-TOP_K = int(os.getenv("TOP_K", "6"))
+TOP_K = int(os.getenv("TOP_K", "8"))
 MIN_SCORE = float(os.getenv("MIN_SCORE", "0.0"))  # optional dense-similarity floor (0 = rely on the model)
 CACHE_SIZE, CACHE_TTL = int(os.getenv("CACHE_SIZE", "500")), int(os.getenv("CACHE_TTL_S", str(24 * 3600)))
 
