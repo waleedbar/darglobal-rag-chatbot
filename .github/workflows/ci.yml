@@ -30,6 +30,8 @@ jobs:
           DOCKER_BUILDKIT=1 docker build --secret id=DATA_KEY,src=/tmp/data_key -t dgrag .
           rm -f /tmp/data_key
           docker images dgrag --format 'image size: {{.Size}}'
+      - name: Memory profile per startup stage
+        run: docker run --rm dgrag python scripts/mem_profile.py
       - name: Smoke test the container (offline LLM stand-in, 512 MB memory cap like the free host)
         run: |
           docker run -d --name app --memory=512m -e LLM_BACKEND=echo -p 7860:7860 dgrag
