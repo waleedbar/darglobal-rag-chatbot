@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -50,9 +51,17 @@ def import_snapshot(path: str) -> int:
     return len(docs)
 
 
+def _key() -> str:
+    """The Fernet key from DATA_KEY, tolerant of how secret stores hand it over
+    (trailing newline, quotes/backticks, a `DATA_KEY=` prefix, BOM or invisible direction marks)."""
+    raw = os.environ.get("DATA_KEY", "")
+    m = re.search(r"[A-Za-z0-9_-]{43}=", raw)
+    return m.group(0) if m else raw.strip()
+
+
 def _fernet():
     from cryptography.fernet import Fernet
-    key = os.environ.get("DATA_KEY", "").strip()
+    key = _key()
     if not key:
         sys.exit("DATA_KEY is not set")
     return Fernet(key.encode())
@@ -71,7 +80,13 @@ def decrypt() -> None:
         print("DATA_KEY not provided - building with Dar Global data only")
         return
     RAW.parent.mkdir(parents=True, exist_ok=True)
-    RAW.write_bytes(_fernet().decrypt(ENC.read_bytes()))
+    try:
+        RAW.write_bytes(_fernet().decrypt(ENC.read_bytes()))
+    except Exception as exc:  # wrong/garbled key: still ship the Dar Global bot, say why (never print the key)
+        raw = os.environ.get("DATA_KEY", "")
+        print(f"WARNING: could not decrypt the Wasalt snapshot ({type(exc).__name__}); DATA_KEY has "
+              f"{len(raw)} chars, {len(_key())} after cleaning - building with Dar Global data only")
+        return
     print(f"decrypted {RAW} ({RAW.stat().st_size} bytes)")
 
 
