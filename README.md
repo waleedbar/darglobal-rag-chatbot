@@ -4,7 +4,7 @@ A bilingual (Arabic / English) chatbot that answers questions about **Dar Global
 listings using only data scraped from their public pages — every answer cites the source page, and it says
 **"I don't know"** when the data doesn't contain the answer.
 
-**Live demo:** _LIVE_URL_ · **Example questions:** [EXAMPLES.md](EXAMPLES.md)
+**Live demo:** **<https://darglobal-rag-chatbot.onrender.com>** (free tier: the first request after ~15 min idle takes ~50 s to wake) · **Example questions:** [EXAMPLES.md](EXAMPLES.md)
 
 ---
 
@@ -17,7 +17,7 @@ flowchart LR
     B[wasalt.sa<br/>8 public category pages] -->|browser snapshot<br/>allowlisted fields only| E[(encrypted snapshot)]
     E -->|decrypted at Docker build| R
     R --> C[chunk + contextual headers<br/>+ price-summary docs]
-    C --> V[multilingual-e5-large<br/>embeddings]
+    C --> V[multilingual MiniLM<br/>int8 ONNX embeddings]
     V --> F[(FAISS cosine index)]
     C --> K[(BM25 keyword index)]
   end
@@ -37,7 +37,7 @@ flowchart LR
 | Clean | navigation/footer/cookie text removed; phone numbers and e-mails scrubbed | `scraper/clean.py` |
 | Chunk | ~1,000-char chunks with 150 overlap; each chunk starts with `[Source / type / title / location]` so it stands alone | `rag/chunking.py` |
 | Summaries | per city/type/purpose price summaries (min / median / max with links) so "cheapest villa in Jeddah" is answerable | `rag/summaries.py` |
-| Embed | `intfloat/multilingual-e5-large` (ONNX via fastembed, CPU) — Arabic questions retrieve English pages | `rag/embeddings.py` |
+| Embed | `paraphrase-multilingual-MiniLM-L12-v2` (ONNX, CPU, runs locally — no API quota spent) — Arabic questions retrieve English pages. Vocabulary table quantized to int8 at build time (cosine vs float32 ≥ 0.9999) | `rag/embeddings.py`, `scripts/quantize_model.py` |
 | Index | FAISS `IndexFlatIP` on normalised vectors (exact cosine) + BM25 with Arabic normalisation | `rag/store.py` |
 | Retrieve | top-30 from each, fused with Reciprocal Rank Fusion, top-6 to the model | `rag/store.py` |
 | Generate | OpenRouter free model, temperature 0.1; strict rules: only the sources, cite `[n]`, `NOT_FOUND` otherwise; reply in the question's language | `rag/pipeline.py`, `rag/llm.py` |
@@ -83,7 +83,7 @@ Two things shaped the Wasalt part:
 
 ```bash
 git clone https://github.com/waleedbar/darglobal-rag-chatbot && cd darglobal-rag-chatbot
-docker build -t dgrag .                                  # downloads e5-large (~2 GB) and builds the index
+docker build -t dgrag .                                  # downloads the embedding model and builds the index
 docker run -p 7860:7860 -e OPENROUTER_API_KEY=sk-or-... dgrag
 # open http://localhost:7860
 ```
@@ -100,21 +100,31 @@ Refresh data: `pip install -r requirements-scraper.txt && python -m scraper.run 
 |---|---|---|
 | `OPENROUTER_API_KEY` | – | OpenRouter key (platform secret) |
 | `OPENROUTER_MODELS` | Gemma 4 31B, Nemotron 3 Ultra, Gemma 4 26B, ERNIE 5.5 Flash (`:free`) | fallback chain, tried in order on 429/outage; intersected at startup with OpenRouter's live list of free models |
-| `EMBED_MODEL` | `intfloat/multilingual-e5-large` | embedding model |
+| `EMBED_MODEL` | `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` | embedding model (build arg; `intfloat/multilingual-e5-large` is a larger alternative that needs ~2 GB RAM) |
 | `TOP_K` / `RATE_LIMIT_PER_MIN` | 6 / 12 | chunks sent to the model / questions per IP per minute |
 | `DATA_KEY` | – | build secret that decrypts the Wasalt snapshot |
 
 ## Deployment
-Hugging Face Spaces (Docker, free CPU). `.github/workflows/ci.yml` runs the tests, builds the real image, smoke-tests
-the container, prints a retrieval-quality report (`scripts/eval_retrieval.py`), then `scripts/deploy_hf.py` pushes
-the repo to the Space and sets `OPENROUTER_API_KEY` / `DATA_KEY` as Space secrets from GitHub secrets.
+**Render** free web service, Docker runtime, defined in [`render.yaml`](render.yaml) (auto-deploys on push to `main`).
+`OPENROUTER_API_KEY` is a Render environment secret; `DATA_KEY` is a Render *secret file*, mounted only during the
+image build to decrypt the Wasalt snapshot. (Hugging Face Docker Spaces now require a paid plan, so they were not used.)
+
+**Fitting 512 MB of RAM.** The free instance has 512 MB. Measured per startup stage in CI (`scripts/mem_profile.py`):
+| Change | Resident memory |
+|---|---|
+| fastembed defaults (fp16 ONNX up-cast to fp32 by onnxruntime) | ~690 MB → OOM |
+| int8 vocabulary table + external, memory-mapped weights + no ORT arena | ~480 MB |
+| XLM-R SentencePiece model instead of the 250k-entry `tokenizer.json` (ids verified identical at build) | **~180 MB** |
+
+CI (`.github/workflows/ci.yml`) runs the unit tests, builds the production image, runs it under `--memory=512m`,
+smoke-tests the API in English and Arabic, and prints a retrieval report (`scripts/eval_retrieval.py`, hit@5 = 11/12).
 
 ## Limitations
 * **Snapshot, not live data.** Scraped on 18 Nov 2026; prices and availability change — answers link to the live page.
 * **Wasalt is a sample** (≈240 listings from 8 category pages), not the whole market; summaries say so. Wasalt
   *project* pages are client-rendered behind `/search` (disallowed), so Wasalt projects/developers are not covered.
 * **Dar Global rarely publishes unit prices**; the bot says the price isn't in the data instead of guessing.
-* **Free models** are rate-limited and sometimes slow; the app falls back across several free models and reports
+* **Free hosting** sleeps after ~15 min idle (first request ~50 s). **Free models** are rate-limited and sometimes slow; the app falls back across several free models and reports
   a temporary outage rather than inventing an answer.
 * Aggregations beyond the pre-computed summaries (e.g. "average price per m² in Al Shati") are not exact — RAG
   retrieves text, it does not run SQL.
@@ -126,7 +136,7 @@ scraper/   http.py (robots, rate limit) · clean.py · darglobal.py · wasalt.py
 rag/       text.py · chunking.py · summaries.py · embeddings.py · store.py · llm.py · pipeline.py · build_index.py
 app/       main.py (FastAPI) · static/index.html (chat UI)
 data/      raw/darglobal.jsonl · private/wasalt.jsonl.enc
-scripts/   eval_retrieval.py · deploy_hf.py
+scripts/   eval_retrieval.py · quantize_model.py · prepare_tokenizer.py · mem_profile.py
 tests/     scraper + RAG + API tests (offline)
 ```
 

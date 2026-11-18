@@ -1,6 +1,6 @@
 # Example questions
 
-Click any of these in the live app (_LIVE_URL_) or send them to `POST /api/chat` with `{"question": "..."}`.
+Click any of these in the live app (https://darglobal-rag-chatbot.onrender.com) or send them to `POST /api/chat` with `{"question": "..."}`.
 Every answer lists its sources with links; the expected behaviour is shown on the right.
 
 ## Dar Global projects (English)
