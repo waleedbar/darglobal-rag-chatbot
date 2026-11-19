@@ -1,9 +1,3 @@
-// Run in the browser console on a public Wasalt category page, e.g.
-//   https://wasalt.sa/en/apartments-for-sale-in-riyadh
-// Visit pages slowly (one every ~10 s). Only allowlisted listing facts are kept, extracted inside the
-// page: no owner/agent/contact fields, coordinates, street names, images or reference numbers.
-// When done, run exportSnapshot() to download wasalt_snapshot.jsonl, then:
-//   python -m scraper.wasalt_import import wasalt_snapshot.jsonl
 function collect(purpose, label) {
   const el = document.getElementById('__NEXT_DATA__'); if (!el) return -1;
   const pp = JSON.parse(el.textContent).props.pageProps;

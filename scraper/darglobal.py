@@ -1,4 +1,3 @@
-"""Dar Global (darglobal.co.uk): project catalogue, project pages and developer pages."""
 from __future__ import annotations
 
 import logging
@@ -32,9 +31,8 @@ def _now() -> str:
 
 
 def discover_projects(client: PoliteClient) -> dict[str, str]:
-    """Return {url: 'Name | Location'} from the public /projects page, merged with the seed list."""
     found: dict[str, str] = {}
-    for line in SEEDS.read_text(encoding="utf-8").splitlines():  # seeds first: they carry "Name | Location"
+    for line in SEEDS.read_text(encoding="utf-8").splitlines():
         if line.strip() and not line.startswith("#"):
             url, _, label = line.partition("|")
             found[url.strip().rstrip("/")] = label.strip()
@@ -49,7 +47,7 @@ def discover_projects(client: PoliteClient) -> dict[str, str]:
             text = " ".join(a.get_text(" ", strip=True).split())
             if a.find("img") or ("," in text and len(text) < 160):
                 href = href.replace("://www.", "://").rstrip("/")
-                if href.lower() not in {u.lower() for u in found}:  # paths are case-sensitive; dedupe ignoring case
+                if href.lower() not in {u.lower() for u in found}:
                     found[href] = text
     except Exception as e:  # noqa: BLE001 - listing page is a convenience, seeds still work
         log.warning("could not read listing page: %s", e)
@@ -57,7 +55,6 @@ def discover_projects(client: PoliteClient) -> dict[str, str]:
 
 
 def embedded_text(html: str, max_chars: int = 12000) -> str:
-    """Collect human-readable strings from __NEXT_DATA__ (titles, descriptions, specs), skipping URLs/ids/code."""
     data = next_data(html)
     if not data:
         return ""
@@ -70,7 +67,7 @@ def embedded_text(html: str, max_chars: int = 12000) -> str:
         elif isinstance(o, list):
             short = [v for v in o if isinstance(v, str) and len(v) < 40] + \
                     [v.get("name") or v.get("label") for v in o if isinstance(v, dict) and len(str(v.get("name") or v.get("label") or "")) < 40]
-            if len(o) > 30 and len(short) > 0.8 * len(o):  # dropdown data (countries, codes) - not content
+            if len(o) > 30 and len(short) > 0.8 * len(o):
                 return
             for v in o:
                 walk(v)
@@ -101,7 +98,7 @@ def scrape_project(client: PoliteClient, url: str, label: str) -> dict | None:
         log.warning("%s -> %s", url, r.status_code)
         return None
     title, desc, text = visible_text(r.text)
-    if len(text) < 400:  # client-rendered page: fall back to the text embedded in Next.js page data
+    if len(text) < 400:
         text = (text + "\n" + embedded_text(r.text)).strip()
     name, _, location = label.partition("|") if "|" in label else (label, "", "")
     f = facts(text)
@@ -112,8 +109,6 @@ def scrape_project(client: PoliteClient, url: str, label: str) -> dict | None:
         header.append(f"Summary: {scrub(desc)}")
     if f["handover"]:
         header.append(f"Handover/completion: {f['handover']}")
-    # NOTE: no price line here on purpose. Figures like "SAR 4M+" on these pages are often the Saudi
-    # residency-investment threshold, not a unit price; the raw page text keeps that context for the LLM.
     return {"id": "dg:" + urlparse(url).path.strip("/").lower(), "source": "darglobal", "type": "project",
             "url": url, "title": title or name.strip(), "lang": "en",
             "text": "\n".join(header) + "\n\n" + text, "meta": {"location": location.strip(), **f},

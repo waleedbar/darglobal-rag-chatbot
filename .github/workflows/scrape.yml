@@ -24,7 +24,7 @@ jobs:
           python-version: "3.12"
       - run: pip install -r requirements-scraper.txt
       - name: Run scraper (robots.txt-aware, 2-3 s between requests)
-        run: python -m scraper.run --only darglobal   # wasalt.sa returns 403 to cloud IPs - see README
+        run: python -m scraper.run --only darglobal
       - name: Show what was collected
         run: |
           wc -l data/raw/*.jsonl

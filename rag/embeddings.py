@@ -1,10 +1,3 @@
-"""Embedding backends.
-
-* FastEmbedEmbedder - production: paraphrase-multilingual-MiniLM-L12-v2 (ONNX, quantized to int8 at build time, 50+ languages
-  incl. Arabic) so the container fits a 512 MB free instance; set EMBED_MODEL=intfloat/multilingual-e5-large
-  for higher recall when more RAM is available (both run locally: no API quota is spent on embeddings).
-* HashEmbedder - deterministic offline fallback used in unit tests (no model download).
-"""
 from __future__ import annotations
 
 import hashlib
@@ -19,7 +12,6 @@ DEFAULT_MODEL = os.getenv("EMBED_MODEL", "sentence-transformers/paraphrase-multi
 
 
 def _trim_heap() -> None:
-    """Give memory freed while loading the model back to the OS (glibc keeps it otherwise)."""
     try:
         import ctypes
 
@@ -33,8 +25,6 @@ def _l2(x: np.ndarray) -> np.ndarray:
 
 
 class HFTokenizer:
-    """Hugging Face `tokenizers` (exact, but parsing XLM-R's 250k-entry tokenizer.json costs ~280 MB)."""
-
     def __init__(self, path: str, max_tokens: int):
         from tokenizers import Tokenizer
 
@@ -50,8 +40,6 @@ class HFTokenizer:
 
 
 class SentencePieceXLMR:
-    """The same XLM-R tokenization straight from the SentencePiece model (fairseq id layout)."""
-
     BOS, PAD, EOS, UNK = 0, 1, 2, 3
 
     def __init__(self, path: str, max_tokens: int):
@@ -76,14 +64,6 @@ class SentencePieceXLMR:
 
 
 class FastEmbedEmbedder:
-    """Multilingual sentence embeddings with onnxruntime.
-
-    fastembed is used once to download the ONNX model into the cache; inference then runs the
-    (build-time int8-quantized) graph directly with graph optimisations off. ORT's constant folding
-    would otherwise de-quantize the embedding table back to float32 (~570 MB resident instead of
-    ~150 MB), which does not fit a 512 MB free instance.
-    """
-
     MAX_TOKENS = 128
 
     def __init__(self, model: str = DEFAULT_MODEL, cache_dir: str | None = None):
@@ -91,7 +71,7 @@ class FastEmbedEmbedder:
         self.e5 = "e5" in model.lower()
         cache = Path(cache_dir or os.getenv("MODEL_CACHE", "models"))
         found = self._find(cache)
-        if found is None:  # first run (image build): let fastembed download the files
+        if found is None:
             from fastembed import TextEmbedding
 
             TextEmbedding(model_name=model, cache_dir=str(cache), lazy_load=True)
@@ -106,12 +86,12 @@ class FastEmbedEmbedder:
         so.inter_op_num_threads = 1
         try:
             self.session = ort.InferenceSession(str(found), so, providers=["CPUExecutionProvider"])
-        except Exception:  # un-quantized float16 file: needs ORT's default graph transforms
+        except Exception:
             so.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
             self.session = ort.InferenceSession(str(found), so, providers=["CPUExecutionProvider"])
         self.inputs = {i.name for i in self.session.get_inputs()}
         sp_file = found.parent / "sentencepiece.bpe.model"
-        if sp_file.exists():  # verified at build time to give identical ids; ~250 MB less RAM
+        if sp_file.exists():
             self.tok = SentencePieceXLMR(str(sp_file), self.MAX_TOKENS)
         else:
             self.tok = HFTokenizer(str(found.parent / "tokenizer.json"), self.MAX_TOKENS)
@@ -120,7 +100,7 @@ class FastEmbedEmbedder:
     def _find(self, cache: Path) -> Path | None:
         key = self.name.split("/")[-1].lower()
         hits = [p for p in cache.rglob("*.onnx") if key in str(p).lower() and (p.parent / "tokenizer.json").exists()]
-        hits.sort(key=lambda p: (p.name != "model_int8.onnx", str(p)))  # prefer the build-time int8 model
+        hits.sort(key=lambda p: (p.name != "model_int8.onnx", str(p)))
         return hits[0] if hits else None
 
     def _embed(self, texts: list[str], batch: int = 16) -> np.ndarray:
@@ -131,7 +111,7 @@ class FastEmbedEmbedder:
             if "token_type_ids" in self.inputs:
                 feed["token_type_ids"] = np.zeros_like(ids)
             hidden = self.session.run(None, {k: v for k, v in feed.items() if k in self.inputs})[0].astype("float32")
-            if hidden.ndim == 3:  # mean pooling over real tokens
+            if hidden.ndim == 3:
                 m = mask[..., None].astype("float32")
                 hidden = (hidden * m).sum(1) / np.clip(m.sum(1), 1e-9, None)
             out.append(hidden.astype("float32"))
@@ -145,8 +125,6 @@ class FastEmbedEmbedder:
 
 
 class HashEmbedder:
-    """Bag-of-words hashing into a fixed space; good enough to exercise the pipeline in tests."""
-
     name = "hash-512"
 
     def __init__(self, dim: int = 512):

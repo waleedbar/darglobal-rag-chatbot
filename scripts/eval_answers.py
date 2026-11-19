@@ -1,16 +1,3 @@
-"""End-to-end answer evaluation against a running deployment (real OpenRouter model).
-
-For each question in eval/questions.jsonl it checks, automatically:
-  * unanswerable / off-topic / prompt-injection  -> the bot says "I don't know" (no sources);
-  * answerable -> not "I don't know", a cited source matches the expected page, every [n] marker points to a
-    listed source, the expected fact (`must` regex) is in the answer, and the answer is in the question's language;
-  * partial (e.g. unpublished price) -> no invented price; the answer says the price is not in the data.
-
-    python scripts/eval_answers.py --url https://darglobal-rag-chatbot.onrender.com --ids dg-neptune-handover,na-japan
-    python scripts/eval_answers.py --limit 15 --out eval/answer_results.md
-
-The free model tier allows 20 requests/minute and 50/day, so requests are spaced out and the set can be run in parts.
-"""
 from __future__ import annotations
 
 import argparse

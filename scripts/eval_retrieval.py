@@ -1,13 +1,3 @@
-"""Retrieval evaluation on the labelled EN/AR question set (eval/questions.jsonl), with an ablation.
-
-For every answerable question we know which page(s) hold the answer (`expect`, a regex on the URL).
-Reports hit@1, hit@5 and MRR@10 per language for hybrid (dense + BM25, RRF) vs dense-only vs BM25-only,
-optionally for several chunk sizes (each one rebuilds a temporary index):
-
-    python scripts/eval_retrieval.py                       # built index, all three modes
-    python scripts/eval_retrieval.py --chunks 500,1000     # also compare chunk sizes
-    python scripts/eval_retrieval.py --out eval/retrieval_results.md
-"""
 from __future__ import annotations
 
 import argparse

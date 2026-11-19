@@ -1,4 +1,3 @@
-"""Tests run fully offline: hashing embedder, temporary index built from the committed Dar Global data."""
 import os
 import tempfile
 

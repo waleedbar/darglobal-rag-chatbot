@@ -1,6 +1,3 @@
-"""Generation via OpenRouter (free models), with a fallback chain across several free models.
-
-The API key comes only from the OPENROUTER_API_KEY environment variable (a platform secret)."""
 from __future__ import annotations
 
 import logging
@@ -11,8 +8,6 @@ import httpx
 
 log = logging.getLogger("rag.llm")
 URL = "https://openrouter.ai/api/v1/chat/completions"
-# Preferred free models (checked on openrouter.ai/api/v1/models, Nov 2026). Free models come and go, so at
-# startup the list is intersected with OpenRouter's live catalogue and topped up with other ":free" models.
 DEFAULT_MODELS = os.getenv(
     "OPENROUTER_MODELS",
     "google/gemma-4-31b-it:free,nvidia/nemotron-3-ultra-550b-a55b:free,"
@@ -40,7 +35,6 @@ class OpenRouterLLM:
 
     @staticmethod
     def _live_free_models(preferred: list[str]) -> list[str]:
-        """Keep preferred models that are still free on OpenRouter, then add other free chat models as backups."""
         try:
             data = httpx.get("https://openrouter.ai/api/v1/models", timeout=15).json()["data"]
         except Exception as e:  # noqa: BLE001 - offline start: keep the configured list
@@ -59,7 +53,6 @@ class OpenRouterLLM:
         return bool(self.api_key)
 
     def chat(self, system: str, user: str, history: list[dict] | None = None) -> tuple[str, str]:
-        """Return (text, model_used). Tries each free model in order on rate limits / outages."""
         if not self.api_key:
             raise LLMError("OPENROUTER_API_KEY is not set")
         messages = [{"role": "system", "content": system}, *(history or []), {"role": "user", "content": user}]
@@ -89,8 +82,6 @@ class OpenRouterLLM:
 
 
 class EchoLLM:
-    """Offline stand-in for tests: answers with the first context line that shares words with the question."""
-
     configured = True
 
     def chat(self, system: str, user: str, history: list[dict] | None = None) -> tuple[str, str]:

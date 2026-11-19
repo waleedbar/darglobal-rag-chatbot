@@ -1,4 +1,3 @@
-"""Print resident memory after each startup stage (used in CI to keep the app under 512 MB)."""
 import os, sys
 sys.path.insert(0, os.getcwd())
 

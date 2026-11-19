@@ -1,4 +1,3 @@
-"""Offline tests for the scrapers (no network): parsing, allowlisting and PII scrubbing."""
 import json
 
 from scraper import darglobal, wasalt
@@ -15,7 +14,6 @@ WASALT_ITEM = {
     "featureAmenities": [{"name": "Elevator"}, {"name": "Parking"}],
     "isVerified": True,
     "publishedAt": "2026-10-01T10:00:00Z",
-    # personal / sensitive fields that must never be stored:
     "leadContactInfo": {"name": "Ahmed Agent", "phone": "+966 55 123 4567"},
     "propertyOwner": {"name": "Owner Name", "email": "owner@example.com"},
     "contactDetails": {"phone": "0551234567"},
@@ -79,7 +77,7 @@ def test_seed_list_has_all_catalogue_projects():
             raise RuntimeError("offline")
     found = darglobal.discover_projects(NoNet())
     assert len(found) >= 38 and "https://darglobal.co.uk/neptune" in found
-    assert "https://darglobal.co.uk/Sunrise-Haven-Luxury-Villas" in found  # case preserved
+    assert "https://darglobal.co.uk/Sunrise-Haven-Luxury-Villas" in found
 
 
 def test_embedded_text_fallback_for_client_rendered_pages():

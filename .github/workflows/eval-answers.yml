@@ -1,7 +1,5 @@
 name: Evaluate live answers
 
-# Manually triggered: asks the deployed bot the labelled questions (real free OpenRouter model) and grades the answers.
-# Kept manual because the free model tier allows only 50 requests/day.
 on:
   workflow_dispatch:
     inputs:

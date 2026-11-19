@@ -1,4 +1,3 @@
-"""RAG pipeline tests with a fixed mini-corpus, the hashing embedder and fake LLMs (fully offline)."""
 import json
 import os
 import tempfile
@@ -38,7 +37,6 @@ def store():
     (tmp / "raw").mkdir()
     (tmp / "raw" / "docs.jsonl").write_text("\n".join(json.dumps(d) for d in DOCS))
     stats = build(HashEmbedder(), raw_dir=tmp / "raw", out=tmp / "index")
-    # + statistics docs: cheapest / most expensive / price stats for "Villa" and "All types" in Jeddah
     assert stats["docs"] == len(DOCS) + 6
     return Store(HashEmbedder(), index_dir=tmp / "index")
 
@@ -143,7 +141,7 @@ def test_repeated_questions_are_served_from_cache(store):
     first = answer("When is the handover of Neptune?", store, llm, k=3)
     again = answer("  when is the HANDOVER of neptune? ", store, llm, k=3)
     assert llm.calls == 1 and again["cached"] and again["answer"] == first["answer"]
-    answer("When is the handover of Neptune?", store, Down(LLMError("x")), k=3)  # cached answer survives outages
+    answer("When is the handover of Neptune?", store, Down(LLMError("x")), k=3)
 
 
 def test_echo_llm_end_to_end(store):

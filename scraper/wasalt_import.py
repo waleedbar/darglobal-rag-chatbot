@@ -1,16 +1,3 @@
-"""Import a Wasalt snapshot collected from a normal browser session, and (de)crypt it.
-
-Why: wasalt.sa answers 403 to automated requests from cloud IPs (GitHub Actions, Hugging Face),
-although robots.txt and https://wasalt.sa/llms.txt allow extracting public listing content at a
-moderate rate. The snapshot was therefore collected by visiting 8 public category pages in a regular
-browser (one page every ~10 s) and extracting only allowlisted listing fields in the page itself
-(see docs/wasalt_browser_collector.js). Wasalt's policy forbids redistributing the data, so only an
-encrypted copy is committed; the Docker build decrypts it with the DATA_KEY build secret.
-
-    python -m scraper.wasalt_import import  wasalt_snapshot.jsonl   # -> data/raw/wasalt.jsonl
-    python -m scraper.wasalt_import encrypt                          # -> data/private/wasalt.jsonl.enc
-    python -m scraper.wasalt_import decrypt                          # (Docker build) -> data/raw/wasalt.jsonl
-"""
 from __future__ import annotations
 
 import json
@@ -52,11 +39,9 @@ def import_snapshot(path: str) -> int:
 
 
 def _key() -> str:
-    """The Fernet key from DATA_KEY, tolerant of how secret stores hand it over
-    (trailing newline, a dropped '=' padding, quotes/backticks, a `DATA_KEY=` prefix, BOM or invisible direction marks)."""
     raw = os.environ.get("DATA_KEY", "")
     m = re.search(r"[A-Za-z0-9_-]{43}", raw)
-    return m.group(0) + "=" if m else raw.strip()  # the "=" padding is often lost when copy-pasting
+    return m.group(0) + "=" if m else raw.strip()
 
 
 def _fernet():
@@ -82,7 +67,7 @@ def decrypt() -> None:
     RAW.parent.mkdir(parents=True, exist_ok=True)
     try:
         RAW.write_bytes(_fernet().decrypt(ENC.read_bytes()))
-    except Exception as exc:  # wrong/garbled key: still ship the Dar Global bot, say why (never print the key)
+    except Exception as exc:
         raw = os.environ.get("DATA_KEY", "")
         print(f"WARNING: could not decrypt the Wasalt snapshot ({type(exc).__name__}); DATA_KEY has "
               f"{len(raw)} chars, {len(_key())} after cleaning - building with Dar Global data only")
@@ -100,4 +85,4 @@ if __name__ == "__main__":
     elif cmd == "decrypt":
         decrypt()
     else:
-        sys.exit(__doc__)
+        sys.exit("usage: python -m scraper.wasalt_import import <snapshot.jsonl> | encrypt | decrypt")

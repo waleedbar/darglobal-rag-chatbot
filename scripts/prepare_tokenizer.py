@@ -1,9 +1,3 @@
-"""Fetch XLM-R's SentencePiece model (5 MB) next to the embedding model, if it tokenizes identically.
-
-The Hugging Face tokenizer.json for this vocabulary needs ~280 MB of RAM to load; the SentencePiece
-model needs a fraction of that. We only keep it if it reproduces the reference ids on a varied sample
-(English, Arabic, numbers, punctuation, long text); otherwise the app falls back to tokenizer.json.
-"""
 from __future__ import annotations
 
 import os

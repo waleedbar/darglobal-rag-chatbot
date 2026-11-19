@@ -1,4 +1,3 @@
-"""Polite HTTP client: obeys robots.txt, rate-limits per host, retries with backoff."""
 from __future__ import annotations
 
 import logging
@@ -28,7 +27,6 @@ class PoliteClient:
         self.client = httpx.Client(timeout=timeout, follow_redirects=True,
                                    headers={"User-Agent": USER_AGENT, "Accept-Language": "en,ar;q=0.8"})
 
-    # ---- robots.txt -------------------------------------------------------
     def _robots_for(self, url: str) -> urllib.robotparser.RobotFileParser:
         p = urlparse(url)
         base = f"{p.scheme}://{p.netloc}"
@@ -38,14 +36,13 @@ class PoliteClient:
                 r = self._get_raw(f"{base}/robots.txt")
                 rp.parse(r.text.splitlines() if r.status_code == 200 else [])
             except httpx.HTTPError:
-                rp.parse([])  # unreachable robots.txt -> treat as allow-all (standard behaviour)
+                rp.parse([])
             self._robots[base] = rp
         return self._robots[base]
 
     def allowed(self, url: str) -> bool:
         return self._robots_for(url).can_fetch(USER_AGENT, url)
 
-    # ---- fetching ---------------------------------------------------------
     def _wait(self, host: str) -> None:
         delay = self.min_delay + random.uniform(0, self.jitter)
         elapsed = time.monotonic() - self._last.get(host, 0)

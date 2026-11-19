@@ -1,8 +1,3 @@
-"""Run the scrapers and write data/raw/<source>.jsonl.
-
-    python -m scraper.run                 # both sites
-    python -m scraper.run --only wasalt   # one site
-"""
 from __future__ import annotations
 
 import argparse

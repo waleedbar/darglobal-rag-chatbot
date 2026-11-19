@@ -1,8 +1,5 @@
 name: Keep the demo warm
 
-# Render's free instances sleep after ~15 idle minutes and then need ~50 s to wake. A cheap health check
-# every 10 minutes during Saudi daytime (06:00-24:00 AST) keeps the demo responsive for reviewers while staying
-# well inside the free tier's monthly instance hours. /api/health does not call the LLM (no quota used).
 on:
   schedule:
     - cron: "*/10 3-20 * * *"

@@ -1,4 +1,3 @@
-"""Build and load the hybrid index: FAISS (dense, cosine) + BM25 (keyword), fused with RRF."""
 from __future__ import annotations
 
 import json
@@ -24,7 +23,7 @@ def load_docs(raw_dir: Path = RAW) -> list[dict]:
     docs = []
     for f in sorted(raw_dir.glob("*.jsonl")):
         docs += [json.loads(line) for line in f.read_text(encoding="utf-8").splitlines() if line.strip()]
-    for d in docs:  # older snapshots: make explicit that Wasalt does not state the rent period
+    for d in docs:
         d["text"] = d.get("text", "").replace("(rental price as listed on Wasalt)",
                                               "(rental price as listed on Wasalt; rent period not stated)")
     return docs
@@ -38,7 +37,7 @@ def build(embedder, raw_dir: Path = RAW, out: Path = INDEX_DIR, chunk_chars: int
         raise SystemExit(f"no documents found in {raw_dir}")
     log.info("embedding %d chunks from %d docs with %s", len(chunks), len(docs), embedder.name)
     vecs = embedder.embed_passages([c["text"] for c in chunks])
-    index = faiss.IndexFlatIP(vecs.shape[1])  # vectors are L2-normalised -> inner product == cosine
+    index = faiss.IndexFlatIP(vecs.shape[1])
     index.add(vecs)
     out.mkdir(parents=True, exist_ok=True)
     faiss.write_index(index, str(out / "vectors.faiss"))
@@ -60,9 +59,6 @@ class Store:
         self.stats = json.loads((index_dir / "stats.json").read_text())
 
     def search(self, query: str, k: int = 6, pool: int = 30, mode: str = "hybrid") -> list[dict]:
-        """Hybrid search. Returns chunks with `score` (cosine of best dense match) and `rrf`.
-        At most 3 chunks per page, so one long page cannot crowd out other relevant sources.
-        `mode` = "dense" or "bm25" switches one retriever off (ablation in scripts/eval_retrieval.py)."""
         query = expand_query(query)
         qv = self.embedder.embed_query(query)
         sims, ids = self.index.search(qv, min(pool, len(self.chunks)))

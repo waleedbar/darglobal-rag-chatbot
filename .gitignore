@@ -5,7 +5,6 @@ __pycache__/
 .pytest_cache/
 index/
 models/
-# Wasalt data must not be redistributed in plain form (wasalt.sa/llms.txt) - only the encrypted copy is committed
 data/raw/wasalt.jsonl
 data/private/*.jsonl
 wasalt_snapshot.jsonl

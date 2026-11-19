@@ -1,13 +1,3 @@
-"""Aggregate documents computed from the Wasalt listings.
-
-RAG retrieves text; it cannot compute statistics over hundreds of listings at question time. So questions like
-"what is the cheapest villa in Jeddah?", "average apartment price in Riyadh" or "how much is a 3-bedroom
-apartment in Jeddah?" are answered from exact figures computed here at index time.
-
-Each segment (city x property type x purpose) gets several *small, single-purpose* documents - cheapest,
-most expensive, price statistics, by number of bedrooms - each opening with the words people use for that
-question in English and Arabic. Small focused documents rank far better than one long table, for both BM25
-(length normalisation) and the 128-token embedder (it only "sees" the start of a chunk)."""
 from __future__ import annotations
 
 import statistics

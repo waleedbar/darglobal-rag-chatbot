@@ -1,10 +1,3 @@
-"""Question (+ recent conversation) -> retrieve -> grounded answer with citations, or an honest "I don't know".
-
-Also:
-* follow-up questions ("and when is its handover?") are resolved for retrieval with the previous question;
-* identical questions are answered from an in-memory cache (saves the free model's daily quota);
-* if generation is unavailable (quota / outage) the user still gets the most relevant sources, clearly labelled.
-"""
 from __future__ import annotations
 
 import hashlib
@@ -19,7 +12,7 @@ from .text import detect_lang, normalize, tokenize
 
 log = logging.getLogger("rag.pipeline")
 TOP_K = int(os.getenv("TOP_K", "8"))
-MIN_SCORE = float(os.getenv("MIN_SCORE", "0.0"))  # optional dense-similarity floor (0 = rely on the model)
+MIN_SCORE = float(os.getenv("MIN_SCORE", "0.0"))
 CACHE_SIZE, CACHE_TTL = int(os.getenv("CACHE_SIZE", "500")), int(os.getenv("CACHE_TTL_S", str(24 * 3600)))
 
 IDK = {"en": "I don't know. The Dar Global and Wasalt data I have doesn't contain that information.",
@@ -53,7 +46,6 @@ Rules:
 8. Earlier conversation is only for resolving references like "it" or "that project"; facts still come
    only from the SOURCES."""
 
-# Words that signal the question leans on the previous turn ("its handover", "وكم سعرها").
 _FOLLOW = re.compile(r"\b(it|its|it's|this|that|these|those|they|them|their|there|same|one|ones)\b|"
                      r"(هذا|هذه|ذلك|تلك|هناك|نفس|فيه|فيها|عنه|عنها|منه|منها|لها|له|سعرها|سعره|تسليمه|تسليمها|موقعه|موقعها)",
                      re.I)
@@ -64,7 +56,6 @@ def _is_follow_up(question: str) -> bool:
 
 
 def retrieval_query(question: str, history: list[dict]) -> str:
-    """Resolve follow-ups without spending an extra LLM call: prefix the previous user question."""
     prev = next((h["content"] for h in reversed(history or []) if h.get("role") == "user"), "")
     return f"{prev} {question}" if prev and _is_follow_up(question) else question
 
@@ -85,7 +76,7 @@ class AnswerCache:
 
     @staticmethod
     def key(question: str, history: list[dict]) -> str:
-        ctx = retrieval_query(question, history)  # only what changes the answer
+        ctx = retrieval_query(question, history)
         return hashlib.sha1(" ".join(normalize(ctx).split()).encode()).hexdigest()
 
     def get(self, key: str) -> dict | None:
@@ -148,9 +139,8 @@ def answer(question: str, store, llm, k: int = TOP_K, history: list[dict] | None
 
 
 def _cite(text: str, hits: list[dict]) -> dict:
-    """Keep only valid citations, renumber them [1..n] with one entry per page, and list those pages."""
     cited = sorted({int(n) for n in re.findall(r"\[(\d{1,2})\]", text) if 1 <= int(n) <= len(hits)})
-    if not cited:  # model forgot to cite: show what it was given, ranked
+    if not cited:
         cited = list(range(1, min(3, len(hits)) + 1))
     sources, seen, new_num = [], {}, {}
     for n in cited:
@@ -162,5 +152,5 @@ def _cite(text: str, hits: list[dict]) -> dict:
         new_num[n] = seen[h["url"]]
     text = re.sub(r"\[(\d{1,2})\]", lambda m: f"[{new_num[int(m.group(1))]}]" if int(m.group(1)) in new_num else "",
                   text)
-    text = re.sub(r"(\[\d+\])(\1)+", r"\1", text)  # [1][1] -> [1]
+    text = re.sub(r"(\[\d+\])(\1)+", r"\1", text)
     return {"answer": text.replace("NOT_FOUND", "").strip(), "sources": sources}

@@ -1,12 +1,8 @@
-"""Split documents into retrieval chunks. Every chunk carries a short header (title, source, location)
-so it stays meaningful on its own ("contextual chunk headers")."""
 from __future__ import annotations
 
 import os
 import re
 
-# ~500 chars is about the 128-token window of the MiniLM embedder, so no part of a chunk is invisible to it;
-# it also scored best in the ablation (eval/retrieval_results.md).
 MAX_CHARS = int(os.getenv("CHUNK_CHARS", "500"))
 OVERLAP = int(os.getenv("CHUNK_OVERLAP", "80"))
 
@@ -21,7 +17,7 @@ def split_text(text: str, max_chars: int = MAX_CHARS, overlap: int = OVERLAP) ->
     paras = [p.strip() for p in re.split(r"\n(?=## )|\n{2,}", text) if p.strip()]
     chunks, cur = [], ""
     for p in paras:
-        while len(p) > max_chars:  # very long paragraph: hard split on sentence/line boundaries
+        while len(p) > max_chars:
             cut = max(p.rfind(". ", 0, max_chars), p.rfind("\n", 0, max_chars))
             cut = cut + 1 if cut > max_chars // 2 else max_chars
             if cur:
@@ -42,7 +38,6 @@ def split_text(text: str, max_chars: int = MAX_CHARS, overlap: int = OVERLAP) ->
 def chunk_doc(doc: dict, max_chars: int | None = None, overlap: int | None = None) -> list[dict]:
     head = _header(doc)
     out = []
-    # Pre-computed statistics stay in one piece: the numbers only make sense together.
     bodies = [doc["text"]] if doc.get("type") == "summary" else split_text(doc["text"], max_chars or MAX_CHARS, overlap or OVERLAP)
     for i, body in enumerate(bodies):
         out.append({"chunk_id": f"{doc['id']}#{i}", "doc_id": doc["id"], "source": doc["source"],

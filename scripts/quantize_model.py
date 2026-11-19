@@ -1,13 +1,3 @@
-"""Shrink the cached ONNX embedding model to int8 at image build time (keeps the app under 512 MB RAM).
-
-The published ONNX file stores float16 weights. On CPU, onnxruntime casts those to float32 at load,
-so the resident size more than doubles. Here we:
-  1. convert every float16 tensor / type in the graph to float32,
-  2. store the 250k-token vocabulary table as row-wise int8 (the bulk of the weights),
-  3. sanity-check the result against the float32 graph (cosine similarity of sentence embeddings).
-The int8 model is used for both the index and queries, so vectors stay consistent. The result is written as model_int8.onnx
-(+ external weight file) next to the original; if any step fails the original is used.
-"""
 from __future__ import annotations
 
 import os
@@ -47,11 +37,6 @@ def to_float32(src: Path, dst: Path) -> None:
 
 
 def quantize_vocab_table(src: Path, dst: Path) -> None:
-    """Row-wise int8 for the big token-embedding table: Gather(int8) -> Cast -> Mul(Gather(scale)).
-
-    The vocabulary table (250k x 384) is ~80% of the parameters; everything else stays float32,
-    so no shape inference over the fused contrib ops is needed.
-    """
     import onnx
     from onnx import TensorProto, helper, numpy_helper
 
@@ -118,7 +103,7 @@ def main() -> int:
         print("quantize: no ONNX model found, skipping")
         return 0
     for path in models:
-        real = path.resolve()  # HF cache files are symlinks into blobs/
+        real = path.resolve()
         f32, q8 = real.with_suffix(".f32.tmp"), real.with_suffix(".int8.tmp")
         tok = path.parent / "tokenizer.json"
         try:
@@ -130,8 +115,6 @@ def main() -> int:
                   f"min cosine vs float32 = {cos:.4f}")
             if cos < 0.95:
                 raise ValueError("quantized embeddings drifted too far")
-            # Weights go to an external file next to the graph: onnxruntime memory-maps it instead of
-            # holding both the protobuf bytes and a tensor copy in RAM.
             import onnx
 
             final = path.parent / "model_int8.onnx"

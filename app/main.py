@@ -1,4 +1,3 @@
-"""FastAPI app: chat UI at /, JSON API at /api/chat."""
 from __future__ import annotations
 
 import datetime as dt
@@ -37,19 +36,15 @@ class Turn(BaseModel):
 
 class Ask(BaseModel):
     question: str = Field(min_length=2, max_length=1000)
-    history: list[Turn] = Field(default_factory=list, max_length=12)  # recent turns, for follow-up questions
+    history: list[Turn] = Field(default_factory=list, max_length=12)
 
 
-# Lightweight in-process metrics (reset on restart), exposed at /api/metrics.
 METRICS: Counter = Counter()
 LATENCIES: deque = deque(maxlen=500)
 STARTED = time.time()
 
 
 def _keep_warm() -> None:
-    """Free Render instances sleep after 15 idle minutes and take ~50 s to wake. While the hiring review is
-    running (until KEEP_WARM_UNTIL), the instance pings its own public /api/health every 10 minutes so
-    reviewers never hit a cold start. No LLM call, so no model quota is used. Off when the URL is unknown."""
     url = os.getenv("RENDER_EXTERNAL_URL") or os.getenv("PUBLIC_URL")
     until = os.getenv("KEEP_WARM_UNTIL", "")
     if not url or not until:

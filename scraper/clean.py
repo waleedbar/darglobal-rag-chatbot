@@ -1,4 +1,3 @@
-"""Text extraction and personal-data scrubbing shared by the site scrapers."""
 from __future__ import annotations
 
 import json
@@ -13,14 +12,11 @@ BOILERPLATE = re.compile(r"(cookie|privacy policy|terms (and|&) conditions|all r
 
 
 def scrub(text: str) -> str:
-    """Remove e-mail addresses and phone-number-like sequences (we never store contact details)."""
     text = EMAIL.sub("[removed]", text)
-    # only strip long digit runs that look like phone numbers, keep prices/years/sizes (they are short or have commas)
     return PHONE.sub(lambda m: "[removed]" if len(re.sub(r"\D", "", m.group())) >= 9 else m.group(), text)
 
 
 def visible_text(html: str, max_chars: int = 15000) -> tuple[str, str, str]:
-    """Return (title, meta_description, main_text) with navigation/footer/scripts removed."""
     soup = BeautifulSoup(html, "lxml")
     title = (soup.find("meta", property="og:title") or {}).get("content") or (soup.title.string if soup.title else "")
     desc = (soup.find("meta", attrs={"name": "description"}) or {}).get("content", "")
@@ -29,12 +25,12 @@ def visible_text(html: str, max_chars: int = 15000) -> tuple[str, str, str]:
     root = soup.find("main") or soup.body or soup
     lines, seen = [], set()
     for el in root.find_all(["h1", "h2", "h3", "h4", "p", "li", "td", "th", "dt", "dd", "span", "div"]):
-        if el.find(["p", "li", "div", "h1", "h2", "h3", "table"]):  # only leaf-ish blocks
+        if el.find(["p", "li", "div", "h1", "h2", "h3", "table"]):
             continue
         t = " ".join(el.get_text(" ", strip=True).split())
         if len(t) < 3 or t in seen or BOILERPLATE.search(t):
             continue
-        if lines and (t in lines[-1] or (len(lines) > 1 and t in lines[-2])):  # label/value repeated by the layout
+        if lines and (t in lines[-1] or (len(lines) > 1 and t in lines[-2])):
             continue
         seen.add(t)
         lines.append(f"## {t}" if el.name in ("h1", "h2", "h3") else t)

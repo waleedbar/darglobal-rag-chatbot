@@ -1,4 +1,3 @@
-"""Build the vector + keyword index from data/raw/*.jsonl.   python -m rag.build_index"""
 import json
 import logging
 

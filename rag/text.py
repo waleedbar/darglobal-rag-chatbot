@@ -1,4 +1,3 @@
-"""Language detection and Arabic-aware tokenisation (used for BM25 and the answer language)."""
 from __future__ import annotations
 
 import re
@@ -12,8 +11,6 @@ STOP = set("""the a an of to in on for and or is are was were be with at by from
 much many do does any there their about me i you we can please في من على الى إلى عن ما هل كم هي هو التي الذي او أو و ان أن""".split())
 
 
-# Arabic place names -> English forms used in the (mostly English) source pages. Helps both BM25 and the
-# dense retriever, and disambiguates "عمان" (Oman vs. Amman) towards Oman, where Dar Global builds.
 PLACES = {"الرياض": "Riyadh", "جدة": "Jeddah", "جده": "Jeddah", "مكة": "Makkah", "مكه": "Makkah",
           "المدينة": "Madinah", "الدمام": "Dammam", "الخبر": "Khobar", "دبي": "Dubai", "أبوظبي": "Abu Dhabi",
           "رأس الخيمة": "Ras Al Khaimah RAK", "عمان": "Oman Muscat", "عُمان": "Oman Muscat", "مسقط": "Muscat Oman",
@@ -44,7 +41,7 @@ def tokenize(text: str) -> list[str]:
     for w in _TOKEN.findall(normalize(text)):
         if w in STOP or len(w) < 2:
             continue
-        if AR.search(w) and w.startswith("ال") and len(w) > 4:  # strip Arabic definite article
+        if AR.search(w) and w.startswith("ال") and len(w) > 4:
             w = w[2:]
         toks.append(w)
     return toks

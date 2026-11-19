@@ -1,10 +1,3 @@
-"""Wasalt (wasalt.sa): public city/category result pages.
-
-Each category page embeds its listings as JSON (`__NEXT_DATA__`). We keep ONLY an allowlist of
-property facts (type, city, district, price, size, rooms, amenities, dates). Owner/agent/contact
-fields, coordinates, street names, images and reference numbers are never stored.
-`/search` is disallowed by robots.txt, so it is never requested.
-"""
 from __future__ import annotations
 
 import logging
@@ -17,7 +10,6 @@ log = logging.getLogger("scraper.wasalt")
 BASE = "https://wasalt.sa"
 
 CATEGORIES = [
-    # (path, purpose, label)
     ("/en/properties-for-sale-in-riyadh", "sale", "Properties for sale in Riyadh"),
     ("/en/villas-for-sale-in-riyadh", "sale", "Villas for sale in Riyadh"),
     ("/en/apartments-for-sale-in-riyadh", "sale", "Apartments for sale in Riyadh"),
@@ -100,7 +92,6 @@ def scrape_category(client: PoliteClient, path: str, purpose: str, label: str) -
     docs = [d for d in (parse_listing(p, purpose) for p in props) if d]
     for d in docs:
         d["meta"]["category_page"] = url
-    # public FAQ shown on the category page (general market Q&A, no personal data)
     faq = pp.get("FAQSchema") or {}
     qa = faq.get("mainEntity") if isinstance(faq, dict) else None
     if isinstance(qa, list) and qa:
@@ -122,5 +113,5 @@ def scrape(client: PoliteClient) -> list[dict]:
             log.info("robots.txt disallows %s - skipped", path)
         except Exception as e:  # noqa: BLE001
             log.warning("failed %s: %s", path, e)
-    uniq = {d["id"]: d for d in docs}  # the same listing appears in several categories
+    uniq = {d["id"]: d for d in docs}
     return list(uniq.values())
